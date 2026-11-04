@@ -1,11 +1,31 @@
 {
-  "produkt": "",
-  "popis": "",
+  "produkt": "SimteGen",
+  "popis": "Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.",
   "obsah_zakaznika": "neuklada_se",
   "zpracovani": "v_prohlizeci",
   "externi_pozadavky": "zadne",
   "uloziste_v_prohlizeci": [],
   "cookies": "zadne",
   "subzpracovatele": [],
-  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady na webu se pisou podle nej a kontrola_manifestu.py shazuje build, kdyz kod sahne na neco, co tu neni deklarovane."
+  "poznamka": "Jediny zdroj pravdy o datech produktu. Zasady na webu se pisou podle nej a kontrola_manifestu.py shazuje build, kdyz kod sahne na neco, co tu neni deklarovane.",
+  "adresa": "https://simtegen.com",
+  "kontakt_email": "support@simtegen.com",
+  "firma": {
+    "nazev": "SimteGen, s.r.o.",
+    "ico": "13980351",
+    "sidlo": "Korunní 2569/108, Vinohrady, 101 00 Praha 10",
+    "email": "support@simtegen.com",
+    "produkty": [
+      {
+        "nazev": "Pneusklad — evidence uskladněných pneu",
+        "url": "https://pneusklad.simtegen.com/",
+        "popis": "Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy."
+      },
+      {
+        "nazev": "Kusovník pro truhláře",
+        "url": "https://kusovnik.simtegen.com/",
+        "popis": ""
+      }
+    ]
+  }
 }

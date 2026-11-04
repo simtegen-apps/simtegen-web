@@ -2,3 +2,5 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+
+Sitemap: https://simtegen.com/sitemap.xml
