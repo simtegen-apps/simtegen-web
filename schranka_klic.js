@@ -1,5 +1,5 @@
 // GENEROVANÝ SOUBOR — veřejné klíče schránky SimteGenu, zapisuje je stavba.
-// V šabloně prázdné: dokud je stavba nedoplní, text hlášení repozitář neopustí
-// a odpovědi firmy (functions/api/schranka-odpoved.js) se nepřijímají.
-export const KLIC_SCHRANKY = null;
-export const KLIC_ODPOVEDI = null;
+// Jen veřejné poloviny: hlášení se jimi šifrují a odpovědi firmy ověřují;
+// rozšifrovat a podepsat umí jen SimteGen.
+export const KLIC_SCHRANKY = {"kty": "RSA", "n": "pcZprgPGmbedh7LcINn9AonqKHhRurRhPeD7tkl5u8JPrbmGfY9Fux6wLCS983QDF97sPl-tL5StQkLZRiaY3DxzGv5K9QZd6Bl0EbQQcz4rWG90g-vBBN6Hoci31ZhJIZXnZxJvvAyELOjk1YvucFonT-Av71V9ZZWLCKFxgj2_OzScteULm8vPJ2H73KdjgC51OGIM9P5r6bwSoZRL_B5KpOV7emHVzA3cT1YXw2LJ0aMP6Jqb8FgbZZHkA7L-AzzdhtRDCfXoLY3H4626OiPaMr3Jen4IxFj2S6T16691AkNJjaaAq9h64oQAwoGTYpzSiOnuWDJzi_9DNDoUaknEx5hyC7Vt7kmLATOM_OIGo-gkr8Yv9q4AooxpgwlTlMLIej3oboWIpXf2ruP3tCmwIMkPwKFBS1sVcIyehaPDXOndblWzaGlL_dVerS89Mpydvh4IJybtgCGF27uodyyIEZkvjBdnznhNAHUyWrcp4o8J9aimCYK0ENFe3_kF", "e": "AQAB", "alg": "RSA-OAEP-256", "ext": true, "key_ops": ["encrypt"]};
+export const KLIC_ODPOVEDI = {"kty": "RSA", "n": "sj4UpaoBxBTffx5PUkvmKS7o3hfWZtx4VugtULyMshl7Nr5wY9Dqgmtr_KBW-qw5xQSOPfwBzI7mmESXHI78q0-H_iL89fTdu5eGnXbl-m25brYas3CRLI_x_myisQEmP08U99-DyMoumQcjEyBsYIHC7ZqZhV8oKU4yh8LkIFJHLkuGPxXhsPKL0rZvkCA2CRv1RDUClQQBHYeEBrb_jhF9XcHnA9bKjO_zCvPVKJRr3NWgtMV1zyCJStIGgKICc14_0g2-iaPySSKUoYSEF5BJ7uUGIL_-7Wq73WQD5TR-qUt23iy6EsGFh2FGQ8YxE4kIGJunI2USkUs0YxBThwuxbu9F95K3p4xWBLAV2wb3ydcVkDZB78CrSxDMH33n82V_ZOQlZbpsiBQSAjzfjbKX9H5TO2BvOWna-W2QphiW-eNt4allRwOnBfLV02QfyLn1Q-qfVCul-jBw-VokvtVJ1wDQyKiW-5TEqxaLRC9BunsVSx-zcjrnykE3ffDL", "e": "AQAB", "alg": "RS256", "ext": true, "key_ops": ["verify"]};

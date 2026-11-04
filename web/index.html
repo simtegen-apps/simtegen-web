@@ -1,42 +1,79 @@
 <!doctype html>
+<!-- GENEROVANÝ SOUBOR — neupravuj ručně. Generuje SimteGen (firemni_web.py) z databáze a nastavení. -->
 <html lang="cs">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="application-name" content="Produkt SimteGen">
-  <meta name="simtegen-verze" content="1.0">
-  <title>Produkt SimteGen</title>
+  <meta name="application-name" content="SimteGen">
+  <title>SimteGen — malé aplikace pro řemeslníky a malé firmy</title>
   <link rel="stylesheet" href="styl.css">
   <link rel="stylesheet" href="produkt.css">
   <!-- SEO: GENEROVÁNO z data-manifest.json (vykresli_seo.py) — needituj ručně -->
+  <meta name="description" content="Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.">
+  <link rel="canonical" href="https://simtegen.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="cs_CZ">
+  <meta property="og:title" content="SimteGen">
+  <meta property="og:description" content="Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.">
+  <meta property="og:url" content="https://simtegen.com/">
   <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SimteGen","legalName":"SimteGen, s.r.o.","url":"https://simtegen.com/","description":"Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.","identifier":{"@type":"PropertyValue","propertyID":"IČO","value":"13980351"},"address":"Korunní 2569/108, Vinohrady, 101 00 Praha 10","email":"support@simtegen.com","hasOfferCatalog":{"@type":"OfferCatalog","name":"Aplikace","itemListElement":[{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Pneusklad — evidence uskladněných pneu","url":"https://pneusklad.simtegen.com/","description":"Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy."}},{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Kusovník pro truhláře","url":"https://kusovnik.simtegen.com/"}}]}}</script>
   <!-- /SEO -->
 </head>
 <body>
   <script src="simtegen.js"></script>
   <div class="appka">
+    <nav class="navigace" aria-label="Hlavní menu">
+      <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
+      <a href="/#aplikace">Aplikace</a>
+      <a href="/#jak-pracujeme">Jak pracujeme</a>
+      <a href="/#kontakt">Kontakt</a>
+      <a href="zasady.html">Zásady</a>
+      <span class="mezera"></span>
+      <button class="nahlasit-chybu" type="button">Nahlásit chybu</button>
+    </nav>
     <header class="hlavicka">
-      <h1>Produkt SimteGen</h1>
+      <h1>SimteGen</h1>
       <button type="button" class="nahlasit-chybu jen-telefon" aria-label="Nahlásit chybu">
         <svg aria-hidden="true"><use href="ikony.svg#nahlasit-chybu"/></svg>
       </button>
     </header>
     <main class="obsah">
-      <div class="sekce-titulek"><span>Zárodek ze šablony</span></div>
-      <section class="prazdno">
-        <svg class="ikona-velka" aria-hidden="true"><use href="ikony.svg#seznam"/></svg>
-        <h2>Tady bude nástroj</h2>
-        <p>Stavitel tuhle obrazovku nahradí skutečným nástrojem. Skládá ho
-        z návrhového systému <code>styl.css</code> podle <code>DESIGN.md</code>:
-        přehled se sekcemi, nebo nástroj s výkresem přes celou plochu —
-        vždy jedna hlavní akce.</p>
+      <section class="karta">
+        <h2>Malé aplikace pro řemeslníky a malé firmy</h2>
+        <p>Děláme malé placené aplikace pro řemeslníky, živnostníky a malé firmy. Každá řeší jednu konkrétní věc z jejich práce a dělá ji pořádně — na webu i v telefonu.</p>
+      </section>
+      <div class="sekce-titulek" id="aplikace"><span>Aplikace</span></div>
+      <section class="mrizka">
+        <article class="karta">
+          <h3>Pneusklad — evidence uskladněných pneu</h3>
+          <p>Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.</p>
+          <p class="popisek">129 Kč Kč / firma / měsíc · prvních 30 dní zdarma</p>
+          <a class="tlacitko vedlejsi" href="https://pneusklad.simtegen.com/">Otevřít Pneusklad — evidence uskladněných pneu</a>
+        </article>
+        <article class="karta">
+          <h3>Kusovník pro truhláře</h3>
+          <p></p>
+          <p class="popisek">449 Kč za firmu a měsíc · prvních 14 dní zdarma</p>
+          <a class="tlacitko vedlejsi" href="https://kusovnik.simtegen.com/">Otevřít Kusovník pro truhláře</a>
+        </article>
+      </section>
+      <div class="sekce-titulek" id="jak-pracujeme"><span>Jak pracujeme</span></div>
+      <section class="karta">
+        <p>Aplikace u nás vymýšlí, staví, testuje i udržuje hlavně umělá inteligence. Člověk do toho vstupuje málo: rozhodne, co se postaví, a každou změnu pustí ven až po kontrole. Díky tomu se vyplatí dělat nástroje i pro úzké obory, pro které by je jinak nikdo nevyvíjel.</p>
+        <p>Každá aplikace má vlastní zásady ochrany údajů a obchodní podmínky. Data aplikací ukládáme v EU, neprodáváme je a nepoužíváme k reklamě.</p>
+      </section>
+      <div class="sekce-titulek" id="kontakt"><span>Kontakt</span></div>
+      <section class="karta">
+        <p>Napište nám na <a href="mailto:support@simtegen.com">support@simtegen.com</a>.
+        Chybu v aplikaci nahlásíte nejrychleji přímo v ní tlačítkem Nahlásit chybu.</p>
       </section>
     </main>
     <footer class="paticka">
+      <a href="/">SimteGen</a>
       <a href="zasady.html">Zásady ochrany údajů</a>
       <button type="button" class="nahlasit-chybu odkaz">Nahlásit chybu</button>
+      <p class="popisek">SimteGen, s.r.o., IČO 13980351, DIČ CZ13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10.</p>
     </footer>
   </div>
 </body>
