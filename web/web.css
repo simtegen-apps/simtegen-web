@@ -1,0 +1,135 @@
+/* Web firmy SimteGen — rozvržení webové stránky nad návrhovým systémem v3
+ * (styl.css). Zapisuje SimteGen (firemni_web.py), v repu webu se needituje.
+ *
+ * Proč vlastní soubor: styl.css je stavěný pro aplikace (boční menu, tiché
+ * obrazovky); firemní stránka potřebuje horní lištu, sekce přes celou šířku
+ * a výkresy jako obrazy. Barvy jen proměnnými ze styl.css — barvy produktů
+ * přidává generátor na konec jako --barva-produktu na .p-<kandidát>. */
+
+html { scroll-padding-top: 72px; }
+.w-obal { width: 100%; max-width: 72rem; margin: 0 auto; padding: 0 1.25rem; }
+@media (min-width: 768px) { .w-obal { padding: 0 2.5rem; } }
+
+/* Hlavička: značka, menu (od 900 px), Nahlásit chybu. */
+.w-hlava { position: sticky; top: 0; z-index: 20; background: var(--barva-papir); border-bottom: 1px solid var(--barva-linka); }
+.w-hlava .w-obal { display: flex; align-items: center; gap: 1.5rem; min-height: 64px; }
+.w-znacka { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; min-height: 44px; }
+.w-menu { display: none; gap: 0.25rem; margin-left: auto; }
+.w-menu a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.75rem; color: var(--barva-tuzka); text-decoration: none; font-size: 0.9375rem; }
+.w-menu a:hover { color: var(--barva-inkoust); }
+.w-nahlasit { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding: 0 0.5rem; background: none; border: 1px solid var(--barva-linka); color: var(--barva-inkoust); font: inherit; font-size: var(--velikost-4); cursor: pointer; }
+.w-nahlasit-ik { width: 20px; height: 20px; }
+.w-nahlasit-text { display: none; }
+@media (min-width: 900px) {
+  .w-menu { display: flex; }
+  .w-nahlasit { margin-left: 0.5rem; border: 0; color: var(--barva-tuzka); }
+  .w-nahlasit-text { display: inline; }
+}
+
+/* Typografie stránky. */
+.w-lead { font-size: 1.1875rem; line-height: 1.55; color: var(--barva-tuzka); max-width: 36rem; }
+.w-nadtitul { display: inline-flex; align-items: center; gap: 8px; font-size: var(--velikost-4); font-weight: 500; color: var(--barva-tuzka); }
+.w-nadtitul .ukazatel { display: inline-block; width: 10px; height: 10px; background: var(--barva-produktu); }
+.w-nadpis { font-size: 1.75rem; letter-spacing: -0.035em; margin-bottom: 2rem; }
+.w-velky-nadpis { font-size: clamp(1.75rem, 4.5vw, 2.5rem); line-height: 1.08; letter-spacing: -0.045em; font-weight: 700; }
+.w-akce { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; }
+.w-odkaz { display: inline-flex; align-items: center; min-height: 44px; font-weight: 500; color: var(--barva-inkoust); }
+.w-cena { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.035em; color: var(--barva-inkoust); }
+
+/* Úvod: nadpis a výkres. */
+.w-hero { padding: 3rem 0 3.5rem; border-bottom: 1px solid var(--barva-linka); }
+.w-hero-mrizka { display: grid; gap: 2.5rem; align-items: center; }
+.w-hero-text { display: flex; flex-direction: column; gap: 1.25rem; }
+.w-hero-text .w-akce { margin-top: 0.75rem; }
+.w-hero-vykres { background: var(--barva-list); border: 1px solid var(--barva-inkoust); padding: 1.5rem 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.w-hero-vykres .rozmer { text-align: right; }
+@media (min-width: 900px) {
+  .w-hero { padding: 5rem 0 5.5rem; }
+  .w-hero-mrizka { grid-template-columns: 1.05fr 1fr; gap: 4rem; }
+  .w-hero .titulek-velky { font-size: clamp(3rem, 5.4vw, 4.5rem); }
+}
+
+/* Pruh skutečných čísel. */
+.w-cisla .w-obal { display: grid; grid-template-columns: 1fr; }
+.w-cisla .w-obal > div { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.5rem 0; border-bottom: 1px solid var(--barva-linka); }
+.w-cislo { font-size: 2rem; font-weight: 700; letter-spacing: -0.045em; color: var(--barva-inkoust); }
+@media (min-width: 768px) {
+  .w-cisla { border-bottom: 1px solid var(--barva-linka); }
+  .w-cisla .w-obal { grid-template-columns: repeat(3, 1fr); }
+  .w-cisla .w-obal > div { padding: 2rem 2rem 2rem 0; border-bottom: 0; }
+  .w-cisla .w-obal > div + div { border-left: 1px solid var(--barva-linka); padding-left: 2rem; }
+}
+
+/* Sekce. */
+.w-sekce { padding: 4rem 0; }
+@media (min-width: 768px) { .w-sekce { padding: 6rem 0; } }
+.w-plocha { background: var(--barva-plocha-2); }
+.w-dva { display: grid; gap: 2.5rem; }
+@media (min-width: 900px) { .w-dva { grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; } }
+.w-uvod-sekce { padding-bottom: 0; }
+@media (min-width: 768px) { .w-uvod-sekce { padding: 4rem 0 0; } }
+
+/* Aplikace: každá svou sekcí, výkres střídavě vlevo a vpravo. */
+.w-obor { display: grid; gap: 2.5rem; align-items: center; }
+.w-obor-text { display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+@media (min-width: 900px) {
+  .w-obor { grid-template-columns: 1.1fr 1fr; gap: 4rem; }
+  .w-obor.w-obracene .w-obor-text { order: 2; }
+}
+.w-obor-vykres { background: var(--barva-list); border: 1px solid var(--barva-linka); border-top: 4px solid var(--barva-produktu); padding: 1.5rem; }
+.w-obor-hlava { display: flex; align-items: center; gap: 0.9rem; }
+.w-pikto { width: 44px; height: 44px; color: var(--barva-produktu); flex: none; }
+.w-body { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.w-body li { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--barva-inkoust); }
+.w-body .ikonka { color: var(--barva-produktu); margin-top: 0.15em; }
+.w-cena-radek { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; }
+
+/* Jak vzniká aplikace: čtyři kroky na kótované čáře. */
+.w-kroky { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.5rem; }
+.w-kroky li { display: flex; flex-direction: column; gap: 0.35rem; position: relative; }
+.w-krok-cislo { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--barva-inkoust); background: var(--barva-list); font-family: var(--pismo-mono); font-weight: 500; color: var(--barva-inkoust); margin-bottom: 0.5rem; }
+.w-kroky b { font-size: 1.125rem; color: var(--barva-inkoust); }
+.w-poznamka { margin-top: 2rem; max-width: 44rem; color: var(--barva-tuzka); }
+@media (min-width: 900px) {
+  .w-kroky { grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+  .w-kroky li::before { content: ""; position: absolute; top: 20px; left: 40px; right: -2rem; border-top: 1px dashed var(--barva-produktu); }
+  .w-kroky li:last-child::before { display: none; }
+}
+
+.w-formular { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Výkresy ve stylu značky. */
+.w-kresba { width: 100%; height: auto; display: block; overflow: visible; }
+.w-kresba .k-stena { fill: var(--barva-plocha-2); stroke: var(--barva-inkoust); stroke-width: 1.5; }
+.w-kresba .k-stena-cara { stroke: var(--barva-inkoust); stroke-width: 1.5; }
+.w-kresba .k-dil { fill: var(--barva-list); stroke: var(--barva-inkoust); stroke-width: 1.5; }
+.w-kresba .k-vybrany { stroke: var(--barva-produktu); stroke-width: 3; }
+.w-kresba .k-deska { fill: var(--barva-inkoust); }
+.w-kresba .k-okno { fill: var(--barva-list); stroke: var(--barva-tuzka); stroke-width: 1; stroke-dasharray: 5 4; }
+.w-kresba .k-tenka { stroke: var(--barva-tuzka); stroke-width: 1; fill: none; }
+.w-kresba .k-pikto { fill: none; stroke: var(--barva-produktu); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; }
+.w-kresba .k-kota line { stroke: var(--barva-produktu); stroke-width: 1.2; }
+.w-kresba .k-kota text { fill: var(--barva-produktu); font-family: var(--pismo-mono); font-size: 15px; text-anchor: middle; }
+.w-kresba .k-stitek rect { fill: var(--barva-list); stroke: var(--barva-produktu); stroke-width: 2; }
+.w-kresba .k-kod { fill: var(--barva-inkoust); font-family: var(--pismo-mono); font-size: 24px; font-weight: 500; }
+.w-kresba .k-maly { fill: var(--barva-tuzka); font-family: var(--pismo-mono); font-size: 15px; }
+.w-kresba .k-text { fill: var(--barva-inkoust); font-family: var(--pismo-mono); font-size: 15px; }
+.w-kresba .k-nadpis { fill: var(--barva-inkoust); font-family: var(--pismo); font-size: 16px; font-weight: 700; }
+
+/* Patička. */
+.w-paticka { border-top: 1px solid var(--barva-inkoust); padding: 2.5rem 0 calc(2.5rem + env(safe-area-inset-bottom)); }
+.w-paticka-radek { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.5rem; margin-bottom: 1rem; }
+.w-paticka-radek a { display: inline-flex; align-items: center; min-height: 44px; color: var(--barva-tuzka); }
+.w-paticka-radek .w-znacka { margin-right: auto; }
+.w-paticka .nahlasit-chybu.odkaz { min-height: 44px; padding: 0; border: 0; background: none; font: inherit; color: var(--barva-inkoust); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Zásady a jiné textové stránky. */
+.w-text { max-width: 44rem; display: flex; flex-direction: column; gap: 1rem; }
+
+/* Barvy produktů — z jejich produkt.css (generuje firemni_web.py). */
+.p-2 { --barva-produktu: #c2410c; }
+.p-3 { --barva-produktu: #2f6b43; }
+@media (prefers-color-scheme: dark) {
+  .p-2 { --barva-produktu: #c2410c; }
+  .p-3 { --barva-produktu: #2f6b43; }
+}

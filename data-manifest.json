@@ -3,7 +3,7 @@
   "popis": "Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.",
   "obsah_zakaznika": "neuklada_se",
   "zpracovani": "v_prohlizeci",
-  "externi_pozadavky": "zadne",
+  "externi_pozadavky": "jen_vlastni_api",
   "uloziste_v_prohlizeci": [],
   "cookies": "zadne",
   "subzpracovatele": [],
@@ -24,8 +24,14 @@
       {
         "nazev": "Kusovník pro truhláře",
         "url": "https://kusovnik.simtegen.com/",
-        "popis": ""
+        "popis": "Návrh kuchyní u zákazníka a kusovník desek pro nářezové centrum."
       }
     ]
-  }
+  },
+  "verejna_api": [
+    {
+      "soubor": "functions/api/podnet.js",
+      "proc": "formulář Co vás trápí? na webu firmy — bez přihlášení, nic neukládá, text odejde šifrovaně firmě"
+    }
+  ]
 }

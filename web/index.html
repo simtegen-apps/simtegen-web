@@ -5,9 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="application-name" content="SimteGen">
-  <title>SimteGen — malé aplikace pro řemeslníky a malé firmy</title>
+  <title>SimteGen — aplikace pro řemeslníky a malé firmy</title>
   <link rel="stylesheet" href="styl.css">
   <link rel="stylesheet" href="produkt.css">
+  <link rel="stylesheet" href="web.css">
   <!-- SEO: GENEROVÁNO z data-manifest.json (vykresli_seo.py) — needituj ručně -->
   <meta name="description" content="Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.">
   <link rel="canonical" href="https://simtegen.com/">
@@ -17,64 +18,125 @@
   <meta property="og:description" content="Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.">
   <meta property="og:url" content="https://simtegen.com/">
   <meta name="twitter:card" content="summary">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SimteGen","legalName":"SimteGen, s.r.o.","url":"https://simtegen.com/","description":"Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.","identifier":{"@type":"PropertyValue","propertyID":"IČO","value":"13980351"},"address":"Korunní 2569/108, Vinohrady, 101 00 Praha 10","email":"support@simtegen.com","hasOfferCatalog":{"@type":"OfferCatalog","name":"Aplikace","itemListElement":[{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Pneusklad — evidence uskladněných pneu","url":"https://pneusklad.simtegen.com/","description":"Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy."}},{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Kusovník pro truhláře","url":"https://kusovnik.simtegen.com/"}}]}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SimteGen","legalName":"SimteGen, s.r.o.","url":"https://simtegen.com/","description":"Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.","identifier":{"@type":"PropertyValue","propertyID":"IČO","value":"13980351"},"address":"Korunní 2569/108, Vinohrady, 101 00 Praha 10","email":"support@simtegen.com","hasOfferCatalog":{"@type":"OfferCatalog","name":"Aplikace","itemListElement":[{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Pneusklad — evidence uskladněných pneu","url":"https://pneusklad.simtegen.com/","description":"Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy."}},{"@type":"Offer","itemOffered":{"@type":"WebApplication","name":"Kusovník pro truhláře","url":"https://kusovnik.simtegen.com/","description":"Návrh kuchyní u zákazníka a kusovník desek pro nářezové centrum."}}]}}</script>
   <!-- /SEO -->
 </head>
 <body>
   <script src="simtegen.js"></script>
-  <div class="appka">
-    <nav class="navigace" aria-label="Hlavní menu">
-      <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
-      <a href="/#aplikace">Aplikace</a>
-      <a href="/#jak-pracujeme">Jak pracujeme</a>
-      <a href="/#kontakt">Kontakt</a>
-      <a href="zasady.html">Zásady</a>
-      <span class="mezera"></span>
-      <button class="nahlasit-chybu" type="button">Nahlásit chybu</button>
-    </nav>
-    <header class="hlavicka">
-      <h1>SimteGen</h1>
-      <button type="button" class="nahlasit-chybu jen-telefon" aria-label="Nahlásit chybu">
-        <svg aria-hidden="true"><use href="ikony.svg#nahlasit-chybu"/></svg>
-      </button>
-    </header>
-    <main class="obsah">
-      <section class="karta">
-        <h2>Malé aplikace pro řemeslníky a malé firmy</h2>
-        <p>Děláme malé placené aplikace pro řemeslníky, živnostníky a malé firmy. Každá řeší jednu konkrétní věc z jejich práce a dělá ji pořádně — na webu i v telefonu.</p>
-      </section>
-      <div class="sekce-titulek" id="aplikace"><span>Aplikace</span></div>
-      <section class="mrizka">
-        <article class="karta">
-          <h3>Pneusklad — evidence uskladněných pneu</h3>
-          <p>Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.</p>
-          <p class="popisek">129 Kč Kč / firma / měsíc · prvních 30 dní zdarma</p>
-          <a class="tlacitko vedlejsi" href="https://pneusklad.simtegen.com/">Otevřít Pneusklad — evidence uskladněných pneu</a>
-        </article>
-        <article class="karta">
-          <h3>Kusovník pro truhláře</h3>
-          <p></p>
-          <p class="popisek">449 Kč za firmu a měsíc · prvních 14 dní zdarma</p>
-          <a class="tlacitko vedlejsi" href="https://kusovnik.simtegen.com/">Otevřít Kusovník pro truhláře</a>
-        </article>
-      </section>
-      <div class="sekce-titulek" id="jak-pracujeme"><span>Jak pracujeme</span></div>
-      <section class="karta">
-        <p>Aplikace u nás vymýšlí, staví, testuje i udržuje hlavně umělá inteligence. Člověk do toho vstupuje málo: rozhodne, co se postaví, a každou změnu pustí ven až po kontrole. Díky tomu se vyplatí dělat nástroje i pro úzké obory, pro které by je jinak nikdo nevyvíjel.</p>
-        <p>Každá aplikace má vlastní zásady ochrany údajů a obchodní podmínky. Data aplikací ukládáme v EU, neprodáváme je a nepoužíváme k reklamě.</p>
-      </section>
-      <div class="sekce-titulek" id="kontakt"><span>Kontakt</span></div>
-      <section class="karta">
-        <p>Napište nám na <a href="mailto:support@simtegen.com">support@simtegen.com</a>.
-        Chybu v aplikaci nahlásíte nejrychleji přímo v ní tlačítkem Nahlásit chybu.</p>
-      </section>
-    </main>
-    <footer class="paticka">
-      <a href="/">SimteGen</a>
-      <a href="zasady.html">Zásady ochrany údajů</a>
-      <button type="button" class="nahlasit-chybu odkaz">Nahlásit chybu</button>
-      <p class="popisek">SimteGen, s.r.o., IČO 13980351, DIČ CZ13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10.</p>
-    </footer>
+<header class="w-hlava"><div class="w-obal">
+  <a class="w-znacka" href="/" aria-label="SimteGen — úvod"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
+  <nav class="w-menu" aria-label="Hlavní menu"><a href="/#aplikace">Aplikace</a><a href="/#jak">Jak pracujeme</a><a href="/#co-vas-trapi">Co vás trápí?</a><a href="zasady.html">Zásady</a></nav>
+  <button type="button" class="nahlasit-chybu w-nahlasit" aria-label="Nahlásit chybu"><svg class="w-nahlasit-ik" aria-hidden="true"><use href="ikony.svg#nahlasit-chybu"/></svg><span class="w-nahlasit-text">Nahlásit chybu</span></button>
+</div></header>
+<main>
+<section class="w-hero"><div class="w-obal w-hero-mrizka">
+  <div class="w-hero-text">
+    <p class="w-nadtitul"><span class="ukazatel"></span>Aplikace pro řemeslo</p>
+    <h1 class="titulek-velky">Méně papírů. Víc práce v dílně.</h1>
+    <p class="w-lead">Malé aplikace pro řemeslníky, živnostníky a malé firmy. Každá řeší jednu věc z vaší práce — v telefonu i na počítači.</p>
+    <div class="w-akce"><a class="tlacitko" href="#aplikace">Vybrat aplikaci</a><a class="w-odkaz" href="#co-vas-trapi">Co vás trápí?</a></div>
   </div>
+  <div class="w-hero-vykres"><svg class="w-kresba" viewBox="0 0 520 330" role="img" aria-label="Výkres stěny kuchyně se skříňkami a kótami">
+  <rect class="k-stena" x="40" y="20" width="440" height="250"/>
+  <rect class="k-okno" x="300" y="45" width="110" height="80"/><line class="k-tenka" x1="355" y1="45" x2="355" y2="125"/>
+  <rect class="k-dil" x="60" y="40" width="100" height="85"/><rect class="k-dil" x="165" y="40" width="100" height="85"/>
+  <line class="k-tenka" x1="150" y1="75" x2="150" y2="95"/><line class="k-tenka" x1="175" y1="75" x2="175" y2="95"/>
+  <rect class="k-deska" x="50" y="170" width="420" height="10"/>
+  <rect class="k-dil" x="60" y="180" width="100" height="85"/><rect class="k-dil k-vybrany" x="165" y="180" width="100" height="85"/>
+  <rect class="k-dil" x="270" y="180" width="90" height="85"/><rect class="k-dil" x="365" y="180" width="95" height="85"/>
+  <line class="k-tenka" x1="270" y1="222" x2="360" y2="222"/><line class="k-tenka" x1="365" y1="222" x2="460" y2="222"/>
+  <g class="k-kota">
+    <line x1="60" y1="295" x2="460" y2="295"/><line x1="60" y1="288" x2="60" y2="302"/><line x1="460" y1="288" x2="460" y2="302"/>
+    <text x="260" y="318">2 400</text>
+    <line x1="165" y1="150" x2="265" y2="150"/><line x1="165" y1="144" x2="165" y2="156"/><line x1="265" y1="144" x2="265" y2="156"/>
+    <text x="215" y="143">600</text>
+    <line x1="25" y1="180" x2="25" y2="265"/><line x1="19" y1="180" x2="31" y2="180"/><line x1="19" y1="265" x2="31" y2="265"/>
+    <text x="25" y="228" transform="rotate(-90 25 228)">720</text>
+  </g>
+</svg><p class="rozmer">výkres stěny · 1 : 20</p></div>
+</div></section>
+<section class="w-cisla" aria-label="SimteGen v číslech"><div class="w-obal"><div><span class="w-cislo">2</span><span class="popisek">aplikace v provozu</span></div><div><span class="w-cislo">od 129 Kč</span><span class="popisek">měsíčně za celou firmu</span></div><div><span class="w-cislo">14–30 dní</span><span class="popisek">zdarma, bez platební karty</span></div></div></section>
+<section class="w-sekce w-uvod-sekce" id="aplikace"><div class="w-obal"><h2 class="w-nadpis">Aplikace</h2></div></section>
+<section class="w-sekce w-plocha p-2"><div class="w-obal w-obor">
+  <div class="w-obor-text">
+    <div class="w-obor-hlava"><svg class="w-pikto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="1.6"/><line x1="19.6" y1="12" x2="21" y2="12"/><line x1="18.582" y1="15.8" x2="19.794" y2="16.5"/><line x1="15.8" y1="18.582" x2="16.5" y2="19.794"/><line x1="12" y1="19.6" x2="12" y2="21"/><line x1="8.2" y1="18.582" x2="7.5" y2="19.794"/><line x1="5.418" y1="15.8" x2="4.206" y2="16.5"/><line x1="4.4" y1="12" x2="3" y2="12"/><line x1="5.418" y1="8.2" x2="4.206" y2="7.5"/><line x1="8.2" y1="5.418" x2="7.5" y2="4.206"/><line x1="12" y1="4.4" x2="12" y2="3"/><line x1="15.8" y1="5.418" x2="16.5" y2="4.206"/><line x1="18.582" y1="8.2" x2="19.794" y2="7.5"/><g><line x1="18.36" y1="18.36" x2="18.72" y2="18.72"/><polyline points="18.72,18.72 18.43,20.13 20.34,22.04 22.04,20.34 20.13,18.43 18.72,18.72"/><circle cx="19.71" cy="19.71" r="0.4"/></g></svg><p class="w-nadtitul">Pneusklad — evidence uskladněných pneu</p></div>
+    <h3 class="w-velky-nadpis">Kde leží čí kola a co zítra sundat</h3>
+    <p class="w-lead">Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy.</p>
+    <ul class="w-body"><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>Ke každé sadě kód a štítek z vaší tiskárny</li><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>Den předem seznam kol k přípravě i s místem v regálu</li><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>Před sezónou víte, koho obvolat a komu dochází dezén</li></ul>
+    <p class="w-cena-radek"><span class="popisek">129 Kč / firma / měsíc · prvních 30 dní zdarma</span></p>
+    <a class="tlacitko vedlejsi" href="https://pneusklad.simtegen.com/">Otevřít Pneusklad</a>
+  </div>
+  <div class="w-obor-vykres"><svg class="w-kresba" viewBox="0 0 520 330" role="img" aria-label="Uskladněná sada čtyř pneumatik se štítkem a kótami">
+  <line class="k-stena-cara" x1="40" y1="280" x2="480" y2="280"/>
+  <rect class="k-dil" x="70" y="60" width="230" height="52"/><line class="k-tenka" x1="70" y1="74" x2="300" y2="74"/><line class="k-tenka" x1="70" y1="98" x2="300" y2="98"/><rect class="k-dil" x="70" y="115" width="230" height="52"/><line class="k-tenka" x1="70" y1="129" x2="300" y2="129"/><line class="k-tenka" x1="70" y1="153" x2="300" y2="153"/><rect class="k-dil" x="70" y="170" width="230" height="52"/><line class="k-tenka" x1="70" y1="184" x2="300" y2="184"/><line class="k-tenka" x1="70" y1="208" x2="300" y2="208"/><rect class="k-dil" x="70" y="225" width="230" height="52"/><line class="k-tenka" x1="70" y1="239" x2="300" y2="239"/><line class="k-tenka" x1="70" y1="263" x2="300" y2="263"/>
+  <g class="k-stitek"><rect x="330" y="120" width="140" height="70"/>
+    <text class="k-kod" x="345" y="150">A-12</text><text class="k-maly" x="345" y="175">205/55 R16</text></g>
+  <line class="k-tenka" x1="300" y1="150" x2="330" y2="150"/>
+  <g class="k-kota">
+    <line x1="50" y1="60" x2="50" y2="277"/><line x1="44" y1="60" x2="56" y2="60"/><line x1="44" y1="277" x2="56" y2="277"/>
+    <text x="50" y="172" transform="rotate(-90 50 172)">4 kola</text>
+    <line x1="70" y1="305" x2="300" y2="305"/><line x1="70" y1="298" x2="70" y2="312"/><line x1="300" y1="298" x2="300" y2="312"/>
+    <text x="185" y="324">dezén 6,2 mm</text>
+  </g>
+</svg></div>
+</div></section>
+<section class="w-sekce p-3"><div class="w-obal w-obor w-obracene">
+  <div class="w-obor-text">
+    <div class="w-obor-hlava"><svg class="w-pikto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="7" height="5"/><rect x="13" y="3" width="7" height="5"/><line x1="3" y1="12" x2="21" y2="12"/><rect x="4" y="12" width="16" height="7"/><line x1="9" y1="12" x2="9" y2="19"/><line x1="15" y1="12" x2="15" y2="19"/><line x1="7" y1="14" x2="7" y2="16"/><line x1="17" y1="14" x2="17" y2="16"/><g><line x1="4" y1="21" x2="20" y2="21"/><line x1="4" y1="20" x2="4" y2="22"/><line x1="20" y1="20" x2="20" y2="22"/></g></svg><p class="w-nadtitul">Kusovník pro truhláře</p></div>
+    <h3 class="w-velky-nadpis">Od měření u zákazníka ke kusovníku</h3>
+    <p class="w-lead">Návrh kuchyní u zákazníka a kusovník desek pro nářezové centrum.</p>
+    <ul class="w-body"><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>Výkres stěny se skříňkami v měřítku přímo u zákazníka</li><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>Kusovník dílů jedním klepnutím podle standardu vaší dílny</li><li><svg class="ikonka" aria-hidden="true"><use href="ikony.svg#hotovo"/></svg>CSV rovnou pro nářezové centrum</li></ul>
+    <p class="w-cena-radek"><span class="popisek">449 Kč za firmu a měsíc · prvních 14 dní zdarma</span></p>
+    <a class="tlacitko vedlejsi" href="https://kusovnik.simtegen.com/">Otevřít Kusovník pro truhláře</a>
+  </div>
+  <div class="w-obor-vykres"><svg class="w-kresba" viewBox="0 0 520 330" role="img" aria-label="Nářezový plán desky a kusovník dílů">
+  <rect class="k-stena" x="20" y="30" width="250" height="250"/>
+  <rect class="k-dil" x="30" y="40" width="70" height="100"/><rect class="k-dil" x="105" y="40" width="70" height="100"/>
+  <rect class="k-dil k-vybrany" x="180" y="40" width="80" height="100"/>
+  <rect class="k-dil" x="30" y="145" width="100" height="55"/><rect class="k-dil" x="135" y="145" width="125" height="55"/>
+  <rect class="k-dil" x="30" y="205" width="230" height="65"/>
+  <text class="k-nadpis" x="300" y="38">Kusovník · stěna A</text>
+  <line class="k-tenka" x1="300" y1="48" x2="490" y2="48"/>
+  <text class="k-text" x="300" y="70">Bok</text><text class="k-maly" x="372" y="70">720 × 560</text><text class="k-text" x="490" y="70" text-anchor="end">4×</text><text class="k-text" x="300" y="104">Dno</text><text class="k-maly" x="372" y="104">564 × 560</text><text class="k-text" x="490" y="104" text-anchor="end">2×</text><text class="k-text" x="300" y="138">Police</text><text class="k-maly" x="372" y="138">562 × 540</text><text class="k-text" x="490" y="138" text-anchor="end">3×</text><text class="k-text" x="300" y="172">Dvířka</text><text class="k-maly" x="372" y="172">716 × 396</text><text class="k-text" x="490" y="172" text-anchor="end">4×</text><text class="k-text" x="300" y="206">Záda</text><text class="k-maly" x="372" y="206">716 × 596</text><text class="k-text" x="490" y="206" text-anchor="end">2×</text>
+  <g class="k-kota">
+    <line x1="20" y1="305" x2="270" y2="305"/><line x1="20" y1="298" x2="20" y2="312"/><line x1="270" y1="298" x2="270" y2="312"/>
+    <text x="145" y="324">deska 2 800 × 2 070</text>
+  </g>
+</svg></div>
+</div></section>
+<section class="w-sekce" id="jak"><div class="w-obal">
+  <h2 class="w-nadpis">Jak vzniká aplikace</h2>
+  <ol class="w-kroky"><li><span class="w-krok-cislo">1</span><b>Podnět z oboru</b><span class="popisek">Co lidi v práci zdržuje</span></li><li><span class="w-krok-cislo">2</span><b>Průzkum</b><span class="popisek">Platí za to někdo? Stojí to za to?</span></li><li><span class="w-krok-cislo">3</span><b>Stavba a kontrola</b><span class="popisek">Staví AI, kontroluje recenzent i člověk</span></li><li><span class="w-krok-cislo">4</span><b>Používáte ji</b><span class="popisek">Zkušební doba zdarma, bez karty</span></li></ol>
+  <p class="w-poznamka">Aplikace u nás vymýšlí, staví, testuje i udržuje hlavně umělá inteligence. Člověk do toho vstupuje málo: rozhodne, co se postaví, a každou změnu pustí ven až po kontrole. Díky tomu se vyplatí dělat nástroje i pro úzké obory, pro které by je jinak nikdo nevyvíjel.</p>
+  <p class="w-poznamka">Každá aplikace má vlastní zásady ochrany údajů a obchodní podmínky. Data aplikací ukládáme v EU, neprodáváme je a nepoužíváme k reklamě.</p>
+</div></section>
+<section class="w-sekce w-plocha" id="co-vas-trapi"><div class="w-obal w-dva">
+  <div><h2 class="w-velky-nadpis">Váš obor tu chybí? Co vás trápí?</h2><p class="w-lead">Napište, co vás v práci zdržuje, štve nebo stojí zbytečně čas. Další aplikace vzniká přesně takhle.</p>
+  <p class="popisek" id="kontakt">Jinak nás najdete na <!--email_off--><a href="mailto:support@simtegen.com">support@simtegen.com</a><!--/email_off-->. Chybu v aplikaci nahlásíte nejrychleji přímo v ní.</p></div>
+  <div class="karta vykres">
+    <form class="w-formular" data-formular data-podnet>
+      <div class="pole">
+        <label for="podnet-text">Co vás v práci zdržuje nebo štve</label>
+        <textarea id="podnet-text" name="text" rows="5" required minlength="20" maxlength="2000"
+          data-chyba="Napište nám prosím aspoň jednu celou větu."></textarea>
+      </div>
+      <div class="pole">
+        <label for="podnet-obor">Obor (nepovinné)</label>
+        <input id="podnet-obor" name="obor" maxlength="60" autocomplete="off">
+      </div>
+      <p class="popisek">Neptáme se na jméno ani e-mail a odpověď neposíláme. Do textu prosím nepište osobní údaje. Když z podnětu vznikne aplikace, najdete ji tady.</p>
+      <button class="tlacitko vedlejsi" type="submit">Odeslat podnět</button>
+      <p class="popisek" role="status" data-podnet-zprava></p>
+    </form>
+  </div>
+</div></section>
+</main>
+<footer class="w-paticka"><div class="w-obal">
+  <div class="w-paticka-radek"><a class="w-znacka" href="/" aria-label="SimteGen — úvod"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
+  <a href="zasady.html">Zásady ochrany údajů</a><!--email_off--><a href="mailto:support@simtegen.com">support@simtegen.com</a><!--/email_off-->
+  <button type="button" class="nahlasit-chybu odkaz">Nahlásit chybu</button></div>
+  <p class="popisek">SimteGen, s.r.o., IČO 13980351, DIČ CZ13980351, se sídlem Korunní 2569/108, Vinohrady, 101 00 Praha 10.</p>
+</div></footer>
+  <script src="podnet.js"></script>
 </body>
 </html>
