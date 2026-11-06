@@ -1,6 +1,6 @@
 {
   "produkt": "SimteGen",
-  "popis": "Malé placené aplikace pro řemeslníky, živnostníky a malé firmy — web i telefon.",
+  "popis": "Malé placené aplikace, které dělají jednu věc pořádně — pro firmy, živnostníky i domácnosti. Na počítači i v telefonu, staví je umělá inteligence.",
   "obsah_zakaznika": "neuklada_se",
   "zpracovani": "v_prohlizeci",
   "externi_pozadavky": "jen_vlastni_api",
@@ -19,7 +19,7 @@
       {
         "nazev": "Pneusklad — evidence uskladněných pneu",
         "url": "https://pneusklad.simtegen.com/",
-        "popis": "Evidence uskladněných pneu se štítky, objednávkovým kalendářem a seznamem kol na zítřek pro malé a mobilní pneuservisy."
+        "popis": "Evidence uskladněných pneu, tisk štítků a objednávkový kalendář s připomínkou pro malé a mobilní pneuservisy. 129 Kč měsíčně za firmu."
       },
       {
         "nazev": "Kusovník pro truhláře",
