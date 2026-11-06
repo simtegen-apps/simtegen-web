@@ -1131,7 +1131,7 @@ MAX_TABLETU = 4
 # small form, drawn by styl.css (.znacka-ctverec — block with the bite,
 # the piece in the product's colour), so the graphic and the app can never
 # show two different logos.
-ZNACKA_HTML = '<span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span>'
+ZNACKA_HTML = '<span class="znacka-ctverec"></span><span class="znacka-slovo">SimteGen</span>'
 
 # The store pictures are composed in the app's own origin: /styl.css brings
 # the same fonts and colours the app uses, and the inline styles here are

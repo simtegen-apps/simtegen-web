@@ -141,7 +141,7 @@ rychle a ukázat zákazníkovi jinak než na papíře“.
   <script src="simtegen.js"></script>
   <div class="appka">
     <nav class="navigace" aria-label="Hlavní menu">
-      <a class="znacka" href="/"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
+      <a class="znacka" href="/"><span class="znacka-ctverec"></span><span class="znacka-slovo">SimteGen</span></a>
       <a href="#prehled" aria-current="page"><svg …/>Přehled</a>
       … nejvýš 4 položky …
       <span class="mezera"></span>

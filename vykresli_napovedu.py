@@ -174,7 +174,7 @@ def stranka(data: dict, nazev: str) -> str:
   <script src="simtegen.js"></script>
   <div class="appka">
     <nav class="navigace" aria-label="Hlavní menu">
-      <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">simtegen</span></a>
+      <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">SimteGen</span></a>
       <a href="/">Zpět do aplikace</a>
       <a href="napoveda.html" aria-current="page">Nápověda</a>
       <span class="mezera"></span>

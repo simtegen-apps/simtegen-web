@@ -179,7 +179,7 @@
   stred.appendChild(znacka.svg);
   var slovo = prvek("span", "znacka-slovo");
   slovo.setAttribute("aria-hidden", "true");
-  var pismena = "simtegen".split("").map(function (p) {
+  var pismena = "SimteGen".split("").map(function (p) {
     var s = prvek("span", "", p);
     slovo.appendChild(s);
     return s;
@@ -661,6 +661,17 @@
     if (!cil || cil.disabled) return;
     e.preventDefault();
     nahrajUkazku(cil);
+  });
+
+  /* The wordmark is "SimteGen" (owner, 5. 11. 2026); it used to be all
+   * lower case. A live product's index.html is its own code, which a
+   * template refresh never touches, so its bar would keep the old word
+   * until its next build. This file is refreshed everywhere: it puts the
+   * word right on load. The source catches up on the next build. */
+  doc.addEventListener("DOMContentLoaded", function () {
+    Array.prototype.forEach.call(doc.querySelectorAll(".znacka-slovo"), function (el) {
+      if (el.childElementCount === 0 && el.textContent.trim() === "simtegen") el.textContent = "SimteGen";
+    });
   });
 
   doc.addEventListener("DOMContentLoaded", function () {
