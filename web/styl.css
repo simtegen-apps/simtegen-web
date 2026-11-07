@@ -534,6 +534,14 @@ html:not(.sg-ukazka) [data-ukazka] { display: none !important; }
    hlavičkou) — jinak by tlačítko slibovalo něco, co produkt nemá. */
 html:not(.sg-ukazkova-nabidka) [data-ukazkova-data] { display: none !important; }
 
+/* ── Přepínač jazyka a měny (vkládá web/simtegen.js) ──────────────── */
+/* Do data-prepinac-jazyka / data-prepinac-meny, typicky v patičce nebo
+   u ceníku. Tichá tlačítka vedle sebe, zvolené podtržené barvou produktu —
+   ne další černá akce na obrazovce. Dotykový cíl drží .tlacitko. */
+.sg-prepinac { display: inline-flex; flex-wrap: wrap; gap: var(--mezera-1); }
+.sg-prepinac .tlacitko[aria-pressed="true"] { color: var(--barva-inkoust); box-shadow: inset 0 -2px 0 var(--barva-produktu); }
+.sg-prepinac .tlacitko[aria-pressed="false"] { color: var(--barva-tuzka); }
+
 /* ── Pomocné ──────────────────────────────────────────────────────── */
 [hidden] { display: none !important; }
 /* An icon from the set (web/ikony.svg) next to text: the size of the text,

@@ -609,6 +609,52 @@ document.addEventListener('securitypolicyviolation', (e) => {
 """
 
 _OBRAZOVKY = "[...document.querySelectorAll('.obrazovka[id]')].map((e) => e.id)"
+
+# Czech left on an English screen (DESIGN.md, Jazyky): visible text with a
+# letter only Czech uses. Á, é, í, ó, ú, ý are left out — they occur in
+# English names and loanwords; ě, š, č, ř, ž, ů, ť, ď, ň do not. What is
+# marked as another language (the "Čeština" button of the switcher, a
+# quoted Czech name with lang="cs") and the product's own name pass.
+_CESKA_PISMENA = "ěščřžůťďňĚŠČŘŽŮŤĎŇ"
+_NEPRELOZENO = r"""
+(() => {
+  const CZ = /[%(pismena)s]/;
+  const nazev = (document.querySelector('meta[name="application-name"]') || {}).content || '';
+  const out = [];
+  const vid = (el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+  const cizi = (el) => { const l = el.closest('[lang]'); return l && !/^en/i.test(l.getAttribute('lang')); };
+  const pridej = (text) => { const k = text.replace(/\s+/g, ' ').trim().slice(0, 60);
+                             if (k && !out.includes(k) && out.length < 12) out.push(k); };
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let u = w.nextNode(); u; u = w.nextNode()) {
+    const el = u.parentElement;
+    if (!el || !CZ.test(u.nodeValue.split(nazev).join(''))) continue;
+    if (el.closest('script, style, noscript, template, code, pre, [translate="no"], .sg-start') || cizi(el) || !vid(el)) continue;
+    pridej(u.nodeValue);
+  }
+  for (const el of document.body.querySelectorAll('[placeholder], [aria-label], [title]')) {
+    if (cizi(el) || !vid(el) || el.closest('.sg-start')) continue;
+    for (const a of ['placeholder', 'aria-label', 'title']) {
+      const v = el.getAttribute(a);
+      if (v && CZ.test(v.split(nazev).join(''))) pridej(v);
+    }
+  }
+  return out;
+})()
+""" % {"pismena": _CESKA_PISMENA}
+
+
+def jazyky_stranky(stranka: Path) -> list[str]:
+    """What the page says it speaks (<meta name="simtegen-jazyky">), Czech
+    when it says nothing — the same reading as simtegen.js."""
+    import re
+
+    try:
+        html = stranka.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ["cs"]
+    m = re.search(r'<meta\s+name=["\']simtegen-jazyky["\']\s+content=["\']([^"\']*)["\']', html)
+    return [j for j in re.split(r"[\s,]+", m.group(1)) if j] if m else ["cs"]
 _AKTIVNI = r"""
 (() => { const o = [...document.querySelectorAll('.obrazovka[id]')].find((e) =>
   !e.hidden && getComputedStyle(e).display !== 'none'); return o ? o.id : null; })()
@@ -700,6 +746,11 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
             "--disable-gpu", "--hide-scrollbars", "--mute-audio", "--disable-sync",
             "--disable-background-networking", "--disable-component-update",
             "--force-color-profile=srgb", "--font-render-hinting=none",
+            # A Czech visitor by default, whatever the runner's locale: a
+            # product that also speaks English (simtegen.js picks by the
+            # browser's languages) is checked in Czech here and in English
+            # only where asked for it (?jazyk=en, the pass below).
+            "--lang=cs-CZ", "--accept-lang=cs-CZ,cs",
             "--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE 127.0.0.1",
             "about:blank"]
     if sit:
@@ -1037,6 +1088,43 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
                         problemy.append(f"web/{stranka.name}: Content-Security-Policy zablokovala "
                                         + "; ".join(zablokovano[:5]) + " — v produkci by to nefungovalo "
                                         "(nebo stránka volá cizí server).")
+        # English: every page that says it speaks English, opened as an
+        # English visitor, every screen, signed out (the demo data are
+        # Czech on purpose — a Czech customer's records stay Czech).
+        dt.volej("Emulation.setEmulatedMedia", features=[
+            {"name": "prefers-color-scheme", "value": "light"},
+            {"name": "prefers-reduced-motion", "value": "reduce"}])
+        for stranka in stranky:
+            if "en" not in jazyky_stranky(stranka):
+                continue
+            if cookie:
+                dt.volej("Network.clearBrowserCookies")
+            _velikost(dt, SIRKY[1][1], SIRKY[1][2])
+            dt.volej("Page.navigate", url=f"{zaklad}/{stranka.name}?jazyk=en")
+            if not dt.cekej_na("Page.loadEventFired", 20):
+                problemy.append(f"web/{stranka.name}?jazyk=en: anglická stránka se nenačetla do 20 s")
+                continue
+            time.sleep(0.6)
+            if dt.js("document.documentElement.lang") != "en":
+                problemy.append(f"web/{stranka.name}: stránka hlásí angličtinu (simtegen-jazyky), ale "
+                                "?jazyk=en ji nepřepne — načítá se simtegen.js a texty.js hned za <body>?")
+                continue
+            cesky: list[str] = []
+            for obrazovka in dt.js(_OBRAZOVKY) or [None]:
+                if obrazovka:
+                    dt.js(_UKAZ % json.dumps(obrazovka))
+                for kus in dt.js(_NEPRELOZENO) or []:
+                    if kus not in cesky:
+                        cesky.append(kus)
+            if cesky:
+                problemy.append(
+                    f"web/{stranka.name} anglicky (?jazyk=en): nepřeložený text — "
+                    + "; ".join(f"„{k}“" for k in cesky[:MAX_PROBLEMU_NA_DRUH])
+                    + " — přidej klíč do texty.js (cs i en) a prvek označ data-t, text ze skriptu piš "
+                    "přes SimteGen.t (viz Jazyky v DESIGN.md).")
+        if cookie:
+            jmeno, _, hodnota = cookie.partition("=")
+            dt.volej("Network.setCookie", name=jmeno, value=hodnota, url=zaklad + "/", path="/")
         if s_daty:
             dt.volej("Emulation.setEmulatedMedia", features=[
                 {"name": "prefers-color-scheme", "value": "light"},

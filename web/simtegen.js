@@ -36,6 +36,530 @@
     return el;
   }
 
+  /* ── Jazyk a měna ──────────────────────────────────────────────────
+   * Apps are sold through Google Play abroad too, so a product speaks the
+   * customer's language and shows prices in the customer's currency.
+   *
+   * Language. The product declares what it speaks in its <head>:
+   *   <meta name="simtegen-jazyky" content="cs en">
+   * and brings its own words right after this script:
+   *   <script src="texty.js"></script>   →   SimteGen.slovnik({"cs": {…}, "en": {…}})
+   * Czech stays written in the HTML (a page without script and a search
+   * engine read Czech); elements marked data-t="klic" (data-t-placeholder,
+   * data-t-aria-label, data-t-title for attributes) get the chosen language
+   * when the page is parsed, and again whenever the product inserts marked
+   * elements later. A product's script asks SimteGen.t("klic", {n: 3}).
+   * The choice: ?jazyk=en (CI renders the English page this way), then a
+   * choice the customer made by hand, then the browser's languages
+   * (Slovak reads Czech), then English — the bigger market — if the
+   * product speaks it. A product without the meta tag stays Czech in full:
+   * an old product must never mix English template bars into Czech screens.
+   *
+   * Currency. The approved price list is web/cenik.json, written by
+   * SimteGen from the owner's approval (never by the builder, never
+   * converted here): every amount in every currency is a fixed number the
+   * owner said yes to. The default currency follows the country Cloudflare
+   * sees (/api/prostredi: CZ → CZK, Europe → EUR, elsewhere USD) — the
+   * country is not stored anywhere, not even here.
+   *
+   * Remembering a choice is the one thing kept in the browser, and only
+   * after the customer switched by hand (browser storage, key "sg-volba": language
+   * and currency, nothing else) — what they asked for, so no consent
+   * (§ 89 odst. 3 ZEK); the policy says so.
+   *
+   * The block between the jazyk:zacatek / jazyk:konec marks is pure (no
+   * DOM): tests/test_jazyky.py runs it in Node.
+   */
+  /* jazyk:zacatek */
+  var NBSP = " ";
+  var TEXTY_SABLONY = {
+    cs: {
+      "sg.nacitam": "Načítám",
+      "sg.nacitam_nazev": "Načítám {nazev}",
+      "sg.zavrit": "Zavřít",
+      "sg.hlaseni.nadpis": "Nahlásit chybu",
+      "sg.hlaseni.pro": "Zpráva pro {nazev}",
+      "sg.hlaseni.pro_nas": "Zpráva pro nás",
+      "sg.hlaseni.uvod": "Napište, co jste dělali a co se stalo. Přiložíme jen technické údaje " +
+        "(verze, obrazovka, chyby stránky), nic o vás. Chcete-li odpověď a nejste přihlášeni, uveďte kontakt.",
+      "sg.hlaseni.popisek": "Co se stalo",
+      "sg.hlaseni.odeslat": "Odeslat hlášení",
+      "sg.hlaseni.prazdne": "Napište nám prosím, o co jde.",
+      "sg.hlaseni.prijato": "Děkujeme, hlášení jsme přijali.",
+      "sg.hlaseni.limit": "Teď nemůžeme přijmout další zprávu — zkuste to prosím za chvíli.",
+      "sg.hlaseni.chyba": "Hlášení se nepodařilo odeslat. Zkuste to prosím znovu.",
+      "sg.hlaseni.offline": "Hlášení se nepodařilo odeslat — jste připojeni k internetu?",
+      "sg.dny": { one: "den", few: "dny", many: "dne", other: "dní" },
+      "sg.predplatit": "Předplatit",
+      "sg.predplatne": "Předplatné",
+      "sg.pruh.vyprselo": "Předplatné vypršelo. Data máte dál uložená — stáhnout si je, napsat nám i smazat " +
+        "účet můžete i teď. Pokračovat v práci půjde po zaplacení.",
+      "sg.pruh.zbyva": "Zkušební období: zbývá {pocet}{do}.",
+      "sg.pruh.do": " (do {datum})",
+      "sg.pruh.konci": "Zkušební období končí {kdy}.",
+      "sg.dnes": "dnes",
+      "sg.zitra": "zítra",
+      "sg.za": "za {pocet}",
+      "sg.za_datum": "za {pocet} ({datum})",
+      "sg.ukazka.pripravuji": "Připravuji ukázková data…",
+      "sg.ukazka.nejde": "Ukázková data teď nejde nahrát.",
+      "sg.ukazka.pruh": "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
+        "v provozu. Až si zapíšete vlastní, ukázku odstraňte.",
+      "sg.ukazka.odstranit": "Odstranit ukázková data",
+      "sg.ukazka.odstranuji": "Odstraňuji…",
+      "sg.znovu_nepovedlo": "Nepovedlo se — zkusit znovu",
+      "sg.offline.text": "Nejde se spojit se serverem — nejspíš slabý signál nebo výpadek internetu. " +
+        "Data zůstávají uložená; až se spojení vrátí, načteme je znovu.",
+      "sg.offline.znovu": "Zkusit znovu",
+      "sg.offline.zkousim": "Zkouším…",
+      "sg.vcera": "Včera",
+      "sg.dnes_velke": "Dnes",
+      "sg.zitra_velke": "Zítra",
+      "sg.dialog.odpoved": "Odpověď",
+      "sg.dialog.ulozit": "Uložit",
+      "sg.dialog.pokracovat": "Pokračovat",
+      "sg.dialog.zrusit": "Zrušit",
+      "sg.vratit": "Vrátit",
+      "sg.vraceno": "Vráceno",
+      "sg.vratit_chyba": "Vrátit se nepodařilo — zkuste to prosím znovu.",
+      "sg.doporucit.text": "Doporučuji {nazev}.",
+      "sg.doporucit.tuhle": "tuhle aplikaci",
+      "sg.doporucit.posli": "Pošlete kolegovi tento odkaz",
+      "sg.doporucit.odkaz": "Odkaz",
+      "sg.doporucit.hotovo": "Hotovo",
+      "sg.doporucit.zkopirovano": "Odkaz je zkopírovaný — vložte ho kolegovi do zprávy.",
+      "sg.pole.zaskrtnete": "Zaškrtněte prosím.",
+      "sg.pole.vyberte": "Vyberte prosím.",
+      "sg.pole.vyplnte": "Vyplňte prosím.",
+      "sg.pole.email": "Zadejte e-mail ve tvaru jmeno@firma.cz.",
+      "sg.pole.url": "Zadejte celou webovou adresu.",
+      "sg.pole.cislo": "Zadejte číslo.",
+      "sg.pole.hodnota": "Zkontrolujte hodnotu.",
+      "sg.pole.aspon": "Aspoň {n} znaků.",
+      "sg.pole.nejvys_znaku": "Nejvýš {n} znaků.",
+      "sg.pole.nejmene": "Nejméně {n}.",
+      "sg.pole.nejvys": "Nejvýš {n}.",
+      "sg.pole.cele": "Zadejte celé číslo.",
+      "sg.pole.nasobek": "Zadejte násobek {n}.",
+      "sg.pole.tvar": "Zkontrolujte tvar.",
+      "sg.pruvodce.hotovo": "Hotovo: ",
+      "sg.jazyk": "Jazyk",
+      "sg.mena": "Měna",
+    },
+    en: {
+      "sg.nacitam": "Loading",
+      "sg.nacitam_nazev": "Loading {nazev}",
+      "sg.zavrit": "Close",
+      "sg.hlaseni.nadpis": "Report a problem",
+      "sg.hlaseni.pro": "Message for {nazev}",
+      "sg.hlaseni.pro_nas": "Message for us",
+      "sg.hlaseni.uvod": "Tell us what you were doing and what happened. We attach only technical details " +
+        "(version, screen, page errors), nothing about you. If you want a reply and are not signed in, " +
+        "add your contact.",
+      "sg.hlaseni.popisek": "What happened",
+      "sg.hlaseni.odeslat": "Send report",
+      "sg.hlaseni.prazdne": "Please tell us what it is about.",
+      "sg.hlaseni.prijato": "Thank you, we have received your report.",
+      "sg.hlaseni.limit": "We cannot take another message right now — please try again in a moment.",
+      "sg.hlaseni.chyba": "The report could not be sent. Please try again.",
+      "sg.hlaseni.offline": "The report could not be sent — are you connected to the internet?",
+      "sg.dny": { one: "day", other: "days" },
+      "sg.predplatit": "Subscribe",
+      "sg.predplatne": "Subscription",
+      "sg.pruh.vyprselo": "Your subscription has expired. Your data is still stored — you can download it, " +
+        "write to us or delete your account even now. You can carry on working once it is paid.",
+      "sg.pruh.zbyva": "Trial: {pocet} left{do}.",
+      "sg.pruh.do": " (until {datum})",
+      "sg.pruh.konci": "Your trial ends {kdy}.",
+      "sg.dnes": "today",
+      "sg.zitra": "tomorrow",
+      "sg.za": "in {pocet}",
+      "sg.za_datum": "in {pocet} ({datum})",
+      "sg.ukazka.pripravuji": "Preparing sample data…",
+      "sg.ukazka.nejde": "Sample data cannot be loaded right now.",
+      "sg.ukazka.pruh": "Your account holds sample data — made-up records that show the app at work. " +
+        "Once you enter your own, remove the sample.",
+      "sg.ukazka.odstranit": "Remove sample data",
+      "sg.ukazka.odstranuji": "Removing…",
+      "sg.znovu_nepovedlo": "That did not work — try again",
+      "sg.offline.text": "Cannot reach the server — probably a weak signal or an internet outage. " +
+        "Your data stays stored; we will load it again once the connection is back.",
+      "sg.offline.znovu": "Try again",
+      "sg.offline.zkousim": "Trying…",
+      "sg.vcera": "Yesterday",
+      "sg.dnes_velke": "Today",
+      "sg.zitra_velke": "Tomorrow",
+      "sg.dialog.odpoved": "Answer",
+      "sg.dialog.ulozit": "Save",
+      "sg.dialog.pokracovat": "Continue",
+      "sg.dialog.zrusit": "Cancel",
+      "sg.vratit": "Undo",
+      "sg.vraceno": "Undone",
+      "sg.vratit_chyba": "Undo did not work — please try again.",
+      "sg.doporucit.text": "I recommend {nazev}.",
+      "sg.doporucit.tuhle": "this app",
+      "sg.doporucit.posli": "Send this link to a colleague",
+      "sg.doporucit.odkaz": "Link",
+      "sg.doporucit.hotovo": "Done",
+      "sg.doporucit.zkopirovano": "The link is copied — paste it into a message to your colleague.",
+      "sg.pole.zaskrtnete": "Please tick this box.",
+      "sg.pole.vyberte": "Please choose one.",
+      "sg.pole.vyplnte": "Please fill this in.",
+      "sg.pole.email": "Enter an e-mail like name@company.com.",
+      "sg.pole.url": "Enter the full web address.",
+      "sg.pole.cislo": "Enter a number.",
+      "sg.pole.hodnota": "Check the value.",
+      "sg.pole.aspon": "At least {n} characters.",
+      "sg.pole.nejvys_znaku": "At most {n} characters.",
+      "sg.pole.nejmene": "At least {n}.",
+      "sg.pole.nejvys": "At most {n}.",
+      "sg.pole.cele": "Enter a whole number.",
+      "sg.pole.nasobek": "Enter a multiple of {n}.",
+      "sg.pole.tvar": "Check the format.",
+      "sg.pruvodce.hotovo": "Done: ",
+      "sg.jazyk": "Language",
+      "sg.mena": "Currency",
+    },
+  };
+  // Formats per language. English follows British order (25 Oct 2026) —
+  // unambiguous for readers on both sides of the Atlantic.
+  var MISTNI = { cs: "cs-CZ", en: "en-GB" };
+  var MENY = ["CZK", "EUR", "USD"];
+  // Europe pays in euros even outside the eurozone: a Pole or a Swiss
+  // reads EUR more easily than USD, and the owner approves only three.
+  var EVROPA = ("AD AL AT BA BE BG BY CH CY DE DK EE ES FI FO FR GB GI GR HR HU IE IS IT LI LT LU LV MC MD ME " +
+    "MK MT NL NO PL PT RO RS SE SI SK SM UA VA XK").split(" ");
+
+  var produktJazyky = ["cs"];
+  var slovnikProduktu = {};
+  var jazyk = "cs";
+
+  function primarni(kod) {
+    var p = String(kod || "").toLowerCase().split(/[-_]/)[0];
+    return p === "sk" ? "cs" : p;
+  }
+
+  // Pure: what the product speaks, the ?jazyk= of the address, the hand
+  // choice and the browser's list in → one language out.
+  function vyberJazyk(nabidka, parametr, volba, prohlizec) {
+    var mozne = (nabidka || []).filter(function (j) { return TEXTY_SABLONY[j]; });
+    if (mozne.indexOf("cs") < 0) mozne.unshift("cs");
+    if (mozne.length === 1) return "cs";
+    if (parametr && mozne.indexOf(parametr) >= 0) return parametr;
+    if (volba && mozne.indexOf(volba) >= 0) return volba;
+    var seznam = prohlizec || [];
+    for (var i = 0; i < seznam.length; i++) {
+      var p = primarni(seznam[i]);
+      if (mozne.indexOf(p) >= 0) return p;
+    }
+    return mozne.indexOf("en") >= 0 ? "en" : "cs";
+  }
+
+  // Pure: the country (or nothing), the hand choice and the currencies the
+  // price list has → one currency.
+  function vyberMenu(nabidka, zeme, volba, jaz) {
+    var mozne = (nabidka && nabidka.length ? nabidka : ["CZK"]).filter(function (m) { return MENY.indexOf(m) >= 0; });
+    if (!mozne.length) mozne = ["CZK"];
+    if (volba && mozne.indexOf(volba) >= 0) return volba;
+    var chci;
+    if (zeme) chci = zeme === "CZ" ? "CZK" : EVROPA.indexOf(zeme) >= 0 ? "EUR" : "USD";
+    else chci = jaz === "cs" ? "CZK" : "EUR";
+    if (mozne.indexOf(chci) >= 0) return chci;
+    if (chci !== "CZK" && mozne.indexOf("EUR") >= 0) return "EUR";
+    return mozne[0];
+  }
+
+  function hledej(jaz, klic) {
+    var z = slovnikProduktu[jaz] && slovnikProduktu[jaz][klic];
+    if (z == null) z = TEXTY_SABLONY[jaz] && TEXTY_SABLONY[jaz][klic];
+    return z;
+  }
+
+  function tr(klic, promenne) {
+    promenne = promenne || {};
+    var hodnota = hledej(jazyk, klic);
+    // A missing English word shows Czech, not the key: CI catches the gap
+    // (kontrola_manifestu.py), the customer still reads a sentence.
+    if (hodnota == null) hodnota = hledej("cs", klic);
+    if (hodnota == null) return String(klic);
+    if (typeof hodnota === "object") {
+      var n = Number(promenne.n);
+      var tvar = "other";
+      try { tvar = new Intl.PluralRules(MISTNI[jazyk] || jazyk).select(isFinite(n) ? n : 0); } catch (e) { /* old engine */ }
+      hodnota = hodnota[tvar] != null ? hodnota[tvar] : hodnota.other;
+    }
+    return String(hodnota).replace(/\{(\w+)\}/g, function (cele, jmeno) {
+      if (!(jmeno in promenne)) return cele;
+      var v = promenne[jmeno];
+      return typeof v === "number" ? cislo(v) : String(v);
+    });
+  }
+
+  function cislo(n, desetinna) {
+    var x = Number(n);
+    if (!isFinite(x)) return "–";
+    // Without a precision: at most two decimals, no trailing zeros (1,5 not 1,50).
+    var s = (desetinna == null ? String(Number(x.toFixed(2))) : x.toFixed(desetinna)).split(".");
+    var cele = s[0].replace(/^-/, "");
+    var oddelovac = jazyk === "cs" ? NBSP : ",";
+    var skupiny = cele.replace(/\B(?=(\d{3})+(?!\d))/g, oddelovac);
+    var minus = x < 0 && Number(s.join(".")) !== 0 ? "−" : "";
+    return minus + skupiny + (s[1] ? (jazyk === "cs" ? "," : ".") + s[1] : "");
+  }
+
+  // A price: the amount as the price list writes it (a decimal string
+  // "4.90" or a number; {halere: true} for minor units, what the API
+  // stores) and its ISO code. Whole amounts without decimals, otherwise two.
+  // Czech writes the sign after the number (129 Kč, 4,90 €, 5,49 US$),
+  // English before it (CZK 129, €4.90, US$5.49).
+  var ZNACKY = { cs: { CZK: "Kč", EUR: "€", USD: "US$" }, en: { CZK: "CZK", EUR: "€", USD: "US$" } };
+  function cena(castka, mena, volby) {
+    var x = Number(castka);
+    if (volby && volby.halere) x = x / 100;
+    if (!isFinite(x)) return "–";
+    mena = String(mena || "CZK").toUpperCase();
+    var cela = Math.round(x * 100) % 100 === 0;
+    var c = cislo(x, cela ? 0 : 2);
+    var znacky = ZNACKY[jazyk] || ZNACKY.en;
+    var znak = znacky[mena] || mena;
+    if (jazyk === "cs") return c + NBSP + znak;
+    if (znak.length > 2) return znak + (znak === "US$" ? "" : NBSP) + c;
+    return znak + c;
+  }
+  function kc(castka, volby) {
+    return cena(castka, "CZK", volby);
+  }
+  function naDatum(d) {
+    if (d instanceof Date) return d;
+    if (typeof d === "number") return new Date(d < 1e12 ? d * 1000 : d);
+    // "2026-10-25 14:05:00" from SQLite is local-less; treat it as UTC like D1 writes it.
+    var s = String(d || "");
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) s = s.replace(" ", "T") + "Z";
+    return new Date(s);
+  }
+  function datum(d, volby) {
+    volby = volby || {};
+    var t = naDatum(d);
+    if (isNaN(t.getTime())) return "–";
+    var dnes = new Date();
+    var den = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    var cas = volby.cas ? NBSP + t.getHours() + ":" + ("0" + t.getMinutes()).slice(-2) : "";
+    if (volby.dny) {
+      var rozdil = Math.round((den(t) - den(dnes)) / 86400000);
+      var slovo = { "-1": "sg.vcera", "0": "sg.dnes_velke", "1": "sg.zitra_velke" }[String(rozdil)];
+      if (slovo) return tr(slovo) + cas;
+    }
+    var rok = volby.rok || t.getFullYear() !== dnes.getFullYear();
+    if (jazyk !== "cs") {
+      // 25 Oct / 25 Oct 2025 — the month as a word, so 3/4 is never a riddle.
+      var mesic = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[t.getMonth()];
+      return t.getDate() + NBSP + mesic + (rok ? NBSP + t.getFullYear() : "") + cas;
+    }
+    return t.getDate() + "." + NBSP + (t.getMonth() + 1) + "." + (rok ? NBSP + t.getFullYear() : "") + cas;
+  }
+  function pocet(n, tvary) {
+    var x = Math.abs(Number(n));
+    if (typeof tvary === "string") {
+      // A dictionary word with its plural forms: SimteGen.pocet(3, "sada").
+      return cislo(n) + NBSP + tr(tvary, { n: x });
+    }
+    // 1 sada, 2–4 sady, 5 sad; a fraction takes the genitive singular (1,5 sady).
+    var cele = Math.round(x) === x;
+    var tvar = !cele ? tvary[1] : x === 1 ? tvary[0] : (x >= 2 && x <= 4) ? tvary[1] : tvary[2];
+    return cislo(n) + NBSP + tvar;
+  }
+  /* jazyk:konec */
+
+  function prijmiJazyk() {
+    var meta = doc.querySelector('meta[name="simtegen-jazyky"]');
+    produktJazyky = meta ? (meta.getAttribute("content") || "").split(/[\s,]+/).filter(Boolean) : ["cs"];
+    var parametr = null;
+    try { parametr = new URLSearchParams(location.search).get("jazyk"); } catch (e) { /* old engine */ }
+    jazyk = vyberJazyk(produktJazyky, parametr, nactiVolbu().jazyk, navigator.languages || [navigator.language]);
+    doc.documentElement.setAttribute("lang", jazyk);
+  }
+
+  function nactiVolbu() {
+    try { return JSON.parse(localStorage.getItem("sg-volba") || "{}") || {}; } catch (e) { return {}; }
+  }
+  function ulozVolbu(co, hodnota) {
+    var v = nactiVolbu();
+    v[co] = hodnota;
+    try { localStorage.setItem("sg-volba", JSON.stringify(v)); } catch (e) { /* blocked: this visit only */ }
+  }
+
+  prijmiJazyk();
+
+  // The product's words: texty.js calls this right after this script, so
+  // the dictionary is there before the page's own script runs.
+  function slovnik(texty) {
+    Object.keys(texty || {}).forEach(function (j) {
+      slovnikProduktu[j] = slovnikProduktu[j] || {};
+      Object.keys(texty[j] || {}).forEach(function (k) { slovnikProduktu[j][k] = texty[j][k]; });
+    });
+  }
+
+  // Text into a marked element without losing its icon: an element with
+  // children keeps them and only its last piece of text changes.
+  function vlozText(el, text) {
+    if (!el.children.length) { el.textContent = text; return; }
+    var uzly = Array.prototype.filter.call(el.childNodes, function (u) {
+      return u.nodeType === 3 && u.nodeValue.trim();
+    });
+    if (!uzly.length) { el.appendChild(doc.createTextNode(text)); return; }
+    var u = uzly[uzly.length - 1];
+    u.nodeValue = u.nodeValue.match(/^\s*/)[0] + text + u.nodeValue.match(/\s*$/)[0];
+  }
+
+  var ATRIBUTY_T = ["placeholder", "aria-label", "title", "alt", "content"];
+  function preloz(koren) {
+    if (!koren || !koren.querySelectorAll) return;
+    var vyber = "[data-t]," + ATRIBUTY_T.map(function (a) { return "[data-t-" + a + "]"; }).join(",");
+    var prvky = Array.prototype.slice.call(koren.querySelectorAll(vyber));
+    if (koren.matches && koren.matches(vyber)) prvky.unshift(koren);
+    prvky.forEach(function (el) {
+      var klic = el.getAttribute("data-t");
+      if (klic && hledej(jazyk, klic) != null) vlozText(el, tr(klic));
+      ATRIBUTY_T.forEach(function (a) {
+        var k = el.getAttribute("data-t-" + a);
+        if (k && hledej(jazyk, k) != null) el.setAttribute(a, tr(k));
+      });
+    });
+  }
+
+  function nastavJazyk(j) {
+    ulozVolbu("jazyk", j);
+    try {
+      var url = new URL(location.href);
+      url.searchParams.delete("jazyk");
+      location.replace(url.toString());
+    } catch (e) { location.reload(); }
+  }
+
+  /* Language names in their own language: someone who cannot read the
+   * current one must still find theirs. */
+  var NAZVY_JAZYKU = { cs: "Čeština", en: "English" };
+  function prepinacJazyka(slot) {
+    var mozne = produktJazyky.filter(function (j) { return TEXTY_SABLONY[j]; });
+    if (mozne.indexOf("cs") < 0) mozne.unshift("cs");
+    if (mozne.length < 2 || slot.querySelector(".sg-prepinac")) return;
+    var skupina = prvek("div", "sg-prepinac");
+    skupina.setAttribute("role", "group");
+    skupina.setAttribute("aria-label", tr("sg.jazyk"));
+    mozne.forEach(function (j) {
+      var b = prvek("button", "tlacitko tiche", NAZVY_JAZYKU[j] || j);
+      b.type = "button";
+      b.setAttribute("lang", j);
+      b.setAttribute("aria-pressed", j === jazyk ? "true" : "false");
+      b.addEventListener("click", function () { if (j !== jazyk) nastavJazyk(j); });
+      skupina.appendChild(b);
+    });
+    slot.appendChild(skupina);
+  }
+
+  /* Price list and currency. One request each, both kept for the page:
+   *   SimteGen.cenik() → Promise {mena, meny, polozky, zkusebni_dni} | null
+   *   SimteGen.mena()  → the currency now ("CZK" until the list arrives)
+   *   SimteGen.nastavMenu("EUR") → remembered, prices redrawn, event sg-mena
+   * Marked elements are filled by this script:
+   *   <span data-cena="mesic"></span> <span data-cena-jednotka="mesic"></span>
+   *   <div data-prepinac-meny></div>
+   * A product drawing prices itself listens for the sg-mena event. */
+  var cenikSlib = null;
+  var menaTed = "CZK";
+  function cenik() {
+    if (cenikSlib) return cenikSlib;
+    var bezCache = { cache: "no-store", credentials: "omit" };
+    var seznam = fetch("cenik.json", bezCache).then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+    var zeme = fetch("/api/prostredi", bezCache).then(function (r) { return r.ok ? r.json() : {}; })
+      .catch(function () { return {}; });
+    cenikSlib = Promise.all([seznam, zeme]).then(function (v) {
+      var c = v[0];
+      if (!c || !Array.isArray(c.polozky)) return null;
+      c.meny = (c.meny || ["CZK"]).filter(function (m) { return MENY.indexOf(m) >= 0; });
+      menaTed = vyberMenu(c.meny, (v[1] && v[1].zeme) || null, nactiVolbu().mena, jazyk);
+      c.mena = menaTed;
+      return c;
+    });
+    return cenikSlib;
+  }
+
+  function jednotka(polozka) {
+    var j = polozka && polozka.jednotka;
+    if (!j || typeof j === "string") return j || "";
+    return j[jazyk] || j.cs || "";
+  }
+
+  function vykresliCeny(c) {
+    if (!c) return;
+    c.mena = menaTed;
+    var podle = {};
+    c.polozky.forEach(function (p) { podle[p.id] = p; });
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-cena]"), function (el) {
+      var p = podle[el.getAttribute("data-cena")];
+      // A currency the list lacks for this item: Czech crowns, which the
+      // owner approved for every item — never a converted guess.
+      var ceny = (p && p.ceny) || {};
+      var mena = ceny[menaTed] != null ? menaTed : "CZK";
+      if (p && ceny[mena] != null) el.textContent = cena(ceny[mena], mena);
+    });
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-cena-jednotka]"), function (el) {
+      var p = podle[el.getAttribute("data-cena-jednotka")];
+      if (p) el.textContent = jednotka(p);
+    });
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-prepinac-meny]"), function (slot) {
+      if (c.meny.length < 2) return;
+      var skupina = slot.querySelector(".sg-prepinac");
+      if (!skupina) {
+        skupina = prvek("div", "sg-prepinac");
+        skupina.setAttribute("role", "group");
+        skupina.setAttribute("aria-label", tr("sg.mena"));
+        c.meny.forEach(function (m) {
+          var b = prvek("button", "tlacitko tiche", m);
+          b.type = "button";
+          b.setAttribute("data-mena", m);
+          b.addEventListener("click", function () { nastavMenu(m); });
+          skupina.appendChild(b);
+        });
+        slot.appendChild(skupina);
+      }
+      Array.prototype.forEach.call(skupina.querySelectorAll("button"), function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-mena") === menaTed ? "true" : "false");
+      });
+    });
+  }
+
+  function nastavMenu(m) {
+    if (MENY.indexOf(m) < 0) return;
+    ulozVolbu("mena", m);
+    menaTed = m;
+    cenik().then(function (c) {
+      vykresliCeny(c);
+      try { doc.dispatchEvent(new CustomEvent("sg-mena", { detail: { mena: m } })); } catch (e) { /* old engine */ }
+    });
+  }
+
+  doc.addEventListener("DOMContentLoaded", function () {
+    preloz(doc.body);
+    preloz(doc.head);
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-prepinac-jazyka]"), prepinacJazyka);
+    if (window.MutationObserver) {
+      // What the product draws later (a list row, a <template> clone) is
+      // translated as it arrives — the builder marks it once, in Czech.
+      new MutationObserver(function (zmeny) {
+        zmeny.forEach(function (z) {
+          Array.prototype.forEach.call(z.addedNodes, function (u) {
+            if (u.nodeType !== 1) return;
+            preloz(u);
+            if (u.matches && u.matches("[data-prepinac-jazyka]")) prepinacJazyka(u);
+          });
+        });
+      }).observe(doc.body, { childList: true, subtree: true });
+    }
+    if (doc.querySelector("[data-cena], [data-cena-jednotka], [data-prepinac-meny]")) cenik().then(vykresliCeny);
+  });
+
   /* ── Logo „Díl“ a jeho animace ─────────────────────────────────────
    * Mřížka 5 × 5 modulů po 10: blok 4 × 4 s vykousnutým čtvrtkruhem
    * (střed 40,10, poloměr 10) a kulatý díl v barvě produktu (42,8; r 8).
@@ -170,7 +694,7 @@
 
   var start = prvek("div", "sg-start");
   start.setAttribute("role", "status");
-  start.setAttribute("aria-label", "Načítám " + nazev);
+  start.setAttribute("aria-label", tr("sg.nacitam_nazev", { nazev: nazev }));
 
   start.appendChild(prvek("div", "sg-start-horni", nazev));
 
@@ -192,7 +716,7 @@
   start.appendChild(stred);
 
   var dolni = prvek("div", "sg-start-dolni");
-  dolni.appendChild(prvek("span", "", "Načítám"));
+  dolni.appendChild(prvek("span", "", tr("sg.nacitam")));
   dolni.appendChild(prvek("span", "", verze ? "V " + verze : ""));
   start.appendChild(dolni);
 
@@ -310,15 +834,14 @@
     panel.setAttribute("aria-modal", "true");
     panel.setAttribute("aria-labelledby", "sg-hlaseni-nadpis");
 
-    var nadpis = prvek("h2", "", "Nahlásit chybu");
+    var nadpis = prvek("h2", "", tr("sg.hlaseni.nadpis"));
     nadpis.id = "sg-hlaseni-nadpis";
-    panel.appendChild(prvek("p", "stitek", "Zpráva pro " + (nazev || "nás")));
+    panel.appendChild(prvek("p", "stitek", nazev ? tr("sg.hlaseni.pro", { nazev: nazev }) : tr("sg.hlaseni.pro_nas")));
     panel.appendChild(nadpis);
-    panel.appendChild(prvek("p", "", "Napište, co jste dělali a co se stalo. Přiložíme jen technické údaje " +
-      "(verze, obrazovka, chyby stránky), nic o vás. Chcete-li odpověď a nejste přihlášeni, uveďte kontakt."));
+    panel.appendChild(prvek("p", "", tr("sg.hlaseni.uvod")));
 
     var pole = prvek("div", "pole");
-    var popisek = prvek("label", "", "Co se stalo");
+    var popisek = prvek("label", "", tr("sg.hlaseni.popisek"));
     popisek.setAttribute("for", "sg-hlaseni-text");
     var text = doc.createElement("textarea");
     text.id = "sg-hlaseni-text";
@@ -334,9 +857,9 @@
     panel.appendChild(hlaska);
 
     var akce = prvek("div", "dva-sloupce sg-hlaseni-akce");
-    var odeslat = prvek("button", "tlacitko", "Odeslat hlášení");
+    var odeslat = prvek("button", "tlacitko", tr("sg.hlaseni.odeslat"));
     odeslat.type = "button";
-    var zrusit = prvek("button", "tlacitko tiche", "Zavřít");
+    var zrusit = prvek("button", "tlacitko tiche", tr("sg.zavrit"));
     zrusit.type = "button";
     zrusit.addEventListener("click", zavri);
     akce.appendChild(odeslat);
@@ -361,7 +884,7 @@
     odeslat.addEventListener("click", function () {
       var obsah = text.value.trim();
       if (obsah.length < 3) {
-        ukazHlasku("chyba", "Napište nám prosím, o co jde.");
+        ukazHlasku("chyba", tr("sg.hlaseni.prazdne"));
         text.focus();
         return;
       }
@@ -373,14 +896,14 @@
       }).then(function (r) {
         if (r.ok) {
           text.value = "";
-          ukazHlasku("uspech", "Děkujeme, hlášení jsme přijali.");
+          ukazHlasku("uspech", tr("sg.hlaseni.prijato"));
         } else if (r.status === 429) {
-          ukazHlasku("chyba", "Teď nemůžeme přijmout další zprávu — zkuste to prosím za chvíli.");
+          ukazHlasku("chyba", tr("sg.hlaseni.limit"));
         } else {
-          ukazHlasku("chyba", "Hlášení se nepodařilo odeslat. Zkuste to prosím znovu.");
+          ukazHlasku("chyba", tr("sg.hlaseni.chyba"));
         }
       }).catch(function () {
-        ukazHlasku("chyba", "Hlášení se nepodařilo odeslat — jste připojeni k internetu?");
+        ukazHlasku("chyba", tr("sg.hlaseni.offline"));
       }).then(function () { odeslat.disabled = false; });
     });
 
@@ -434,10 +957,11 @@
     "[data-ukazkova-data], [data-platba]";
 
   function dny(n) {
-    return n === 1 ? "den" : (n >= 2 && n <= 4 ? "dny" : "dní");
+    return pocet(n, "sg.dny");
   }
 
   function datumKratce(unix) {
+    if (jazyk !== "cs") return datum(unix);
     var d = new Date(unix * 1000);
     return d.getDate() + ". " + (d.getMonth() + 1) + ".";
   }
@@ -513,17 +1037,15 @@
   function obsahPruhu(p, nyni) {
     if (!p || p.platce === false) return null;
     if (p.stav === "vyprselo") {
-      return { trida: "konec", akce: "Předplatit",
-               text: "Předplatné vypršelo. Data máte dál uložená — stáhnout si je, napsat nám i smazat účet " +
-                     "můžete i teď. Pokračovat v práci půjde po zaplacení." };
+      return { trida: "konec", akce: tr("sg.predplatit"), text: tr("sg.pruh.vyprselo") };
     }
     if (p.stav !== "zkusebni") return null;
     var konec = Number(p.zkusebni_do || p.plati_do) || 0;
     var zbyva = Number(p.dni_zbyva) || 0;
     if (zbyva > 7) {
-      return { trida: "", akce: "Předplatné",
-               text: "Zkušební období: zbývá " + zbyva + " " + dny(zbyva) +
-                     (konec ? " (do " + datumKratce(konec) + ")" : "") + "." };
+      return { trida: "", akce: tr("sg.predplatne"),
+               text: tr("sg.pruh.zbyva", { pocet: dny(zbyva),
+                                           "do": konec ? tr("sg.pruh.do", { datum: datumKratce(konec) }) : "" }) };
     }
     var kdy;
     if (konec) {
@@ -533,12 +1055,12 @@
       var den = new Date(konec * 1000);
       den.setHours(0, 0, 0, 0);
       var rozdil = Math.round((den - dnes) / 86400000);
-      kdy = rozdil <= 0 ? "dnes" : rozdil === 1 ? "zítra" : "za " + rozdil + " " + dny(rozdil) +
-        " (" + datumKratce(konec) + ")";
+      kdy = rozdil <= 0 ? tr("sg.dnes") : rozdil === 1 ? tr("sg.zitra")
+        : tr("sg.za_datum", { pocet: dny(rozdil), datum: datumKratce(konec) });
     } else {
-      kdy = "za " + zbyva + " " + dny(zbyva);
+      kdy = tr("sg.za", { pocet: dny(zbyva) });
     }
-    return { trida: "brzy", akce: "Předplatit", text: "Zkušební období končí " + kdy + "." };
+    return { trida: "brzy", akce: tr("sg.predplatit"), text: tr("sg.pruh.konci", { kdy: kdy }) };
   }
 
   function dosad(hodnota, ulozene) {
@@ -599,9 +1121,9 @@
   function nahrajUkazku(tlacitko) {
     var puvodni = tlacitko.textContent;
     tlacitko.disabled = true;
-    tlacitko.textContent = "Připravuji ukázková data…";
+    tlacitko.textContent = tr("sg.ukazka.pripravuji");
     apiJson("/api/ukazka-uctu", "POST", { akce: "nahrat" }).then(function (r) {
-      if (!r.ok) throw new Error(r.data.chyba || "Ukázková data teď nejde nahrát.");
+      if (!r.ok) throw new Error(r.data.chyba || tr("sg.ukazka.nejde"));
       // The range is closed whatever the steps did: removal must work even
       // after a step that failed.
       return prehrajKroky(r.data.kroky || []).catch(function () { return null; }).then(function () {
@@ -612,23 +1134,22 @@
     }).catch(function (e) {
       tlacitko.disabled = false;
       tlacitko.textContent = puvodni;
-      var zprava = prvek("p", "zprava chyba", e.message || "Ukázková data teď nejde nahrát.");
+      var zprava = prvek("p", "zprava chyba", e.message || tr("sg.ukazka.nejde"));
       zprava.setAttribute("role", "status");
       if (tlacitko.parentNode) tlacitko.parentNode.insertBefore(zprava, tlacitko.nextSibling);
     });
   }
 
   function pruhUkazkovychDat() {
-    return pruh("ukazka", "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
-      "v provozu. Až si zapíšete vlastní, ukázku odstraňte.", "Odstranit ukázková data", function (t) {
+    return pruh("ukazka", tr("sg.ukazka.pruh"), tr("sg.ukazka.odstranit"), function (t) {
       t.disabled = true;
-      t.textContent = "Odstraňuji…";
+      t.textContent = tr("sg.ukazka.odstranuji");
       apiJson("/api/ukazka-uctu", "POST", { akce: "odstranit" }).then(function (r) {
         if (!r.ok) throw new Error(r.data.chyba);
         location.reload();
       }).catch(function () {
         t.disabled = false;
-        t.textContent = "Nepovedlo se — zkusit znovu";
+        t.textContent = tr("sg.znovu_nepovedlo");
       });
     });
   }
@@ -738,13 +1259,12 @@
     if (offlinePruh) {
       // A retry that failed again: the same bar, the button usable again.
       var t = offlinePruh.querySelector("button");
-      if (t) { t.disabled = false; t.textContent = "Zkusit znovu"; }
+      if (t) { t.disabled = false; t.textContent = tr("sg.offline.znovu"); }
       return;
     }
-    offlinePruh = pruh("offline", "Nejde se spojit se serverem — nejspíš slabý signál nebo výpadek " +
-      "internetu. Data zůstávají uložená; až se spojení vrátí, načteme je znovu.", "Zkusit znovu", function (t) {
+    offlinePruh = pruh("offline", tr("sg.offline.text"), tr("sg.offline.znovu"), function (t) {
       t.disabled = true;
-      t.textContent = "Zkouším…";
+      t.textContent = tr("sg.offline.zkousim");
       offlineZnovu();
     });
     // An alert, not a status: the page did not change, so nothing else
@@ -805,61 +1325,22 @@
    *   SimteGen.datum(d, {dny: true})        → "Dnes" / "Zítra" / "Včera", else as above
    *   SimteGen.rozmer([600, 720, 510], "mm") → "600 × 720 × 510 mm"
    *   SimteGen.pocet(3, ["sada", "sady", "sad"]) → "3 sady"
+   *   SimteGen.pocet(3, "sada")             → "3 sady" / "3 sets" (forms from texty.js)
+   *   SimteGen.cena("4.90", "EUR")          → "4,90 €" / "€4.90"
+   *   SimteGen.cena(549, "USD", {halere: true}) → "5,49 US$" / "US$5.49"
+   *
+   * In English: 12,345.5 · CZK 1,249 · 25 Oct / 25 Oct 2025 14:05 ·
+   * Today / Tomorrow / Yesterday — the same calls, the language decides
+   * (Jazyk a měna, at the top). The implementations live up there, in the
+   * pure block the Node test runs.
    *
    * Dates take a Date, an ISO string or unix seconds (what D1 returns).
    * The arithmetic stays where it belongs — on the server, in haléře; this
    * only writes a finished number.
    */
-  var NBSP = " ";
-  function cislo(n, desetinna) {
-    var x = Number(n);
-    if (!isFinite(x)) return "–";
-    // Without a precision: at most two decimals, no trailing zeros (1,5 not 1,50).
-    var s = (desetinna == null ? String(Number(x.toFixed(2))) : x.toFixed(desetinna)).split(".");
-    var cele = s[0].replace(/^-/, "");
-    var skupiny = cele.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
-    return (x < 0 && Number(s.join(".")) !== 0 ? "−" : "") + skupiny + (s[1] ? "," + s[1] : "");
-  }
-  function kc(castka, volby) {
-    var x = Number(castka);
-    if (volby && volby.halere) x = x / 100;
-    if (!isFinite(x)) return "–";
-    var cela = Math.round(x * 100) % 100 === 0;
-    return cislo(x, cela ? 0 : 2) + NBSP + "Kč";
-  }
-  function naDatum(d) {
-    if (d instanceof Date) return d;
-    if (typeof d === "number") return new Date(d < 1e12 ? d * 1000 : d);
-    // "2026-10-25 14:05:00" from SQLite is local-less; treat it as UTC like D1 writes it.
-    var s = String(d || "");
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) s = s.replace(" ", "T") + "Z";
-    return new Date(s);
-  }
-  function datum(d, volby) {
-    volby = volby || {};
-    var t = naDatum(d);
-    if (isNaN(t.getTime())) return "–";
-    var dnes = new Date();
-    var den = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
-    var cas = volby.cas ? NBSP + t.getHours() + ":" + ("0" + t.getMinutes()).slice(-2) : "";
-    if (volby.dny) {
-      var rozdil = Math.round((den(t) - den(dnes)) / 86400000);
-      var slovo = { "-1": "Včera", "0": "Dnes", "1": "Zítra" }[String(rozdil)];
-      if (slovo) return slovo + cas;
-    }
-    var rok = volby.rok || t.getFullYear() !== dnes.getFullYear();
-    return t.getDate() + "." + NBSP + (t.getMonth() + 1) + "." + (rok ? NBSP + t.getFullYear() : "") + cas;
-  }
   function rozmer(hodnoty, jednotka) {
     var cast = [].concat(hodnoty).map(function (h) { return cislo(h); }).join(NBSP + "×" + NBSP);
     return cast + (jednotka ? NBSP + jednotka : "");
-  }
-  function pocet(n, tvary) {
-    var x = Math.abs(Number(n));
-    // 1 sada, 2–4 sady, 5 sad; a fraction takes the genitive singular (1,5 sady).
-    var cele = Math.round(x) === x;
-    var tvar = !cele ? tvary[1] : x === 1 ? tvary[0] : (x >= 2 && x <= 4) ? tvary[1] : tvary[2];
-    return cislo(n) + NBSP + tvar;
   }
 
   /* ── Potvrzení, dotaz a „Vrátit“ ────────────────────────────────────
@@ -973,7 +1454,7 @@
       var vstup = null;
       if (volby.pole) {
         var pole = prvek("div", "pole");
-        var popisek = prvek("label", "", volby.pole.popisek || "Odpověď");
+        var popisek = prvek("label", "", volby.pole.popisek || tr("sg.dialog.odpoved"));
         vstup = doc.createElement("input");
         vstup.id = id + "-pole";
         vstup.type = volby.pole.typ || "text";
@@ -985,8 +1466,8 @@
       }
       var akce = prvek("div", "radka sg-dialog-akce");
       var ano = prvek("button", volby.nebezpecne ? "tlacitko varovne" : "tlacitko",
-        volby.ano || (vstup ? "Uložit" : "Pokračovat"));
-      var ne = prvek("button", "tlacitko vedlejsi", volby.ne || "Zrušit");
+        volby.ano || (vstup ? tr("sg.dialog.ulozit") : tr("sg.dialog.pokracovat")));
+      var ne = prvek("button", "tlacitko vedlejsi", volby.ne || tr("sg.dialog.zrusit"));
       ano.type = "button";
       ne.type = "button";
       akce.appendChild(ano);
@@ -1037,7 +1518,7 @@
     var t = prvek("div", "toast sg-vratit");
     t.setAttribute("role", "status");
     var zprava = prvek("span", "", text);
-    var tlacitko = prvek("button", "", "Vrátit");
+    var tlacitko = prvek("button", "", tr("sg.vratit"));
     tlacitko.type = "button";
     t.appendChild(zprava);
     t.appendChild(tlacitko);
@@ -1054,11 +1535,11 @@
       drz();
       tlacitko.disabled = true;
       Promise.resolve().then(vratit).then(function () {
-        zprava.textContent = "Vráceno";
+        zprava.textContent = tr("sg.vraceno");
         tlacitko.hidden = true;
         casovac = setTimeout(pryc, 1500);
       }, function () {
-        zprava.textContent = "Vrátit se nepodařilo — zkuste to prosím znovu.";
+        zprava.textContent = tr("sg.vratit_chyba");
         tlacitko.disabled = false;
         odpocet();
       });
@@ -1090,15 +1571,16 @@
   function doporucit(kde) {
     var kampan = String(kde || "aplikace").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30) || "aplikace";
     var odkaz = location.origin + "/?utm_source=doporuceni&utm_campaign=" + kampan;
-    var text = "Doporučuji " + (nazev || "tuhle aplikaci") + ".";
+    var text = tr("sg.doporucit.text", { nazev: nazev || tr("sg.doporucit.tuhle") });
     function ukaz() {
-      return zeptej("Pošlete kolegovi tento odkaz", { popisek: "Odkaz", hodnota: odkaz, ano: "Hotovo", ne: "Zavřít" })
+      return zeptej(tr("sg.doporucit.posli"), { popisek: tr("sg.doporucit.odkaz"), hodnota: odkaz,
+                                             ano: tr("sg.doporucit.hotovo"), ne: tr("sg.zavrit") })
         .then(function () { return "ukazano"; });
     }
     function zkopiruj() {
       if (!navigator.clipboard || !navigator.clipboard.writeText) return ukaz();
       return navigator.clipboard.writeText(text + " " + odkaz).then(function () {
-        oznam("Odkaz je zkopírovaný — vložte ho kolegovi do zprávy.");
+        oznam(tr("sg.doporucit.zkopirovano"));
         return "zkopirovano";
       }, ukaz);
     }
@@ -1147,24 +1629,24 @@
     var vlastni = pole.getAttribute("data-chyba");
     if (v.valueMissing) {
       if (vlastni) return vlastni;
-      if (pole.type === "checkbox") return "Zaškrtněte prosím.";
-      if (pole.tagName === "SELECT" || pole.type === "radio") return "Vyberte prosím.";
-      return "Vyplňte prosím.";
+      if (pole.type === "checkbox") return tr("sg.pole.zaskrtnete");
+      if (pole.tagName === "SELECT" || pole.type === "radio") return tr("sg.pole.vyberte");
+      return tr("sg.pole.vyplnte");
     }
     if (vlastni) return vlastni;
-    if (v.typeMismatch && pole.type === "email") return "Zadejte e-mail ve tvaru jmeno@firma.cz.";
-    if (v.typeMismatch && pole.type === "url") return "Zadejte celou webovou adresu.";
-    if (v.badInput) return pole.type === "number" ? "Zadejte číslo." : "Zkontrolujte hodnotu.";
-    if (v.tooShort) return "Aspoň " + pole.minLength + " znaků.";
-    if (v.tooLong) return "Nejvýš " + pole.maxLength + " znaků.";
-    if (v.rangeUnderflow) return "Nejméně " + cislo(pole.min) + ".";
-    if (v.rangeOverflow) return "Nejvýš " + cislo(pole.max) + ".";
+    if (v.typeMismatch && pole.type === "email") return tr("sg.pole.email");
+    if (v.typeMismatch && pole.type === "url") return tr("sg.pole.url");
+    if (v.badInput) return pole.type === "number" ? tr("sg.pole.cislo") : tr("sg.pole.hodnota");
+    if (v.tooShort) return tr("sg.pole.aspon", { n: pole.minLength });
+    if (v.tooLong) return tr("sg.pole.nejvys_znaku", { n: pole.maxLength });
+    if (v.rangeUnderflow) return tr("sg.pole.nejmene", { n: Number(pole.min) });
+    if (v.rangeOverflow) return tr("sg.pole.nejvys", { n: Number(pole.max) });
     if (v.stepMismatch) {
       var krok = Number(pole.step);
-      return krok === 1 ? "Zadejte celé číslo." : "Zadejte násobek " + cislo(krok) + ".";
+      return krok === 1 ? tr("sg.pole.cele") : tr("sg.pole.nasobek", { n: krok });
     }
-    if (v.patternMismatch) return "Zkontrolujte tvar.";
-    return "Zkontrolujte hodnotu.";
+    if (v.patternMismatch) return tr("sg.pole.tvar");
+    return tr("sg.pole.hodnota");
   }
 
   var poradiChyby = 0;
@@ -1355,7 +1837,7 @@
         stav = prvek("span", "pruvodce-stav jen-ctecka");
         li.insertBefore(stav, li.firstChild);
       }
-      stav.textContent = je ? "Hotovo: " : "";
+      stav.textContent = je ? tr("sg.pruvodce.hotovo") : "";
       li.removeAttribute("aria-current");
       if (!je && !aktualni) { aktualni = li; li.setAttribute("aria-current", "step"); }
       Array.prototype.forEach.call(li.querySelectorAll("button, a.tlacitko"), function (b) {
@@ -1373,7 +1855,10 @@
   else napojFormulare();
 
   window.SimteGen = { kdoJsem: kdoJsem, offline: offline, spojeno: spojeno, tisk: tisk,
-    cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet,
+    cislo: cislo, kc: kc, datum: datum, rozmer: rozmer, pocet: pocet, cena: cena,
+    t: tr, jazyk: function () { return jazyk; }, jazyky: function () { return produktJazyky.slice(); },
+    slovnik: slovnik, preloz: preloz, nastavJazyk: nastavJazyk,
+    cenik: cenik, mena: function () { return menaTed; }, nastavMenu: nastavMenu,
     potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular,
     panel: otevriPanel, pruvodce: pruvodce };
 

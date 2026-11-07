@@ -248,6 +248,20 @@ def _zkontroluj_vzhled() -> list[str]:
     return [f"vzhled: {p}" for p in problemy]
 
 
+def _zkontroluj_safari() -> list[str]:
+    """The pages in WebKit as an iPhone (webkit_kontrola.py) — the browser
+    of every iPhone customer, which no other check renders. CI only; an
+    install that fails is a note, not a blocked deploy."""
+    if not Path("webkit_kontrola.py").exists():
+        return ["chybí webkit_kontrola.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
+    import webkit_kontrola
+
+    problemy, poznamka = webkit_kontrola.zkontroluj(Path.cwd())
+    if poznamka and not problemy:
+        print("Safari (WebKit):", poznamka)
+    return [f"safari: {p}" for p in problemy]
+
+
 def _zkontroluj_aplikaci(manifest: dict) -> list[str]:
     """The installable-app module (vykresli_aplikaci.py): off without an
     `aplikace` section; on, every generated file must equal the generator."""
@@ -308,6 +322,16 @@ def _generovane(manifest: dict) -> set[Path]:
     return vykresli_aplikaci.generovane_soubory(manifest)
 
 
+def _zkontroluj_jazyky() -> list[str]:
+    """Languages (DESIGN.md, Jazyky): the dictionary is complete and the
+    keys the pages use exist — shared with the other template."""
+    try:
+        import kontrola_jazyku
+    except ImportError:
+        return ["kontrola_jazyku.py chybí — je to infrastruktura šablony, obnoví ji stavba"]
+    return kontrola_jazyku.zkontroluj(WEB)
+
+
 def main() -> int:
     if not MANIFEST.exists():
         print("CHYBA: chybí data-manifest.json.")
@@ -353,8 +377,10 @@ def main() -> int:
     violations += _zkontroluj_aplikaci(manifest)
     violations += _zkontroluj_seo(manifest)
     violations += _zkontroluj_napovedu()
+    violations += _zkontroluj_jazyky()
     violations += _zkontroluj_bezpecnost(manifest, preskocit)
     violations += _zkontroluj_vzhled()
+    violations += _zkontroluj_safari()
     if violations:
         print("Kód se rozešel s data-manifest.json nebo s DESIGN.md:")
         for violation in violations:
