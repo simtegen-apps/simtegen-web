@@ -40,9 +40,17 @@ VEREJNA_API_SABLONY = {"functions/api/prihlaseni.js", "functions/api/overeni.js"
                        # the login screen breaks too, no session to ask for.
                        "functions/api/chyba-stranky.js",
                        "functions/api/nahlasit.js",
+                       # The visitor's country for the default currency
+                       # (Jazyky a měny): Cloudflare's own two letters back to
+                       # the same page, nothing read, nothing stored.
+                       "functions/api/prostredi.js",
                        # The firm's answer to a report (SimteGen, odpovedi.py): no
                        # session — a signature of the answer key, verified inside.
                        "functions/api/schranka-odpoved.js",
+                       # The firm's check account after a deploy (SimteGen,
+                       # overeni.py): no session — a signature of the answer
+                       # key, and it can only ever open the one fixed account.
+                       "functions/api/kontrolni-prihlaseni.js",
                        # Vyzkoušet ukázku (module play, SimteGen): a throwaway
                        # demo account — the reviewer and the visitor have none.
                        "functions/api/ukazka.js",

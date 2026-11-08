@@ -289,10 +289,77 @@ uvnitř hodnoty jsou nezlomitelné, takže „Kč“ nikdy nezůstane samo na ř
 | `SimteGen.datum(d, {dny: true, cas: true})` | Dnes 14:05 / Zítra / Včera / 28. 10. 9:30 |
 | `SimteGen.rozmer([600, 720, 510], "mm")` | 600 × 720 × 510 mm |
 | `SimteGen.pocet(3, ["sada", "sady", "sad"])` | 3 sady |
+| `SimteGen.pocet(3, "sada")` (tvary z `texty.js`) | 3 sady / 3 sets |
+| `SimteGen.cena("4.90", "EUR")` / `SimteGen.cena(549, "USD", {halere: true})` | 4,90 € / 5,49 US$ |
 
 Datum bere `Date`, ISO text nebo unixové sekundy (co vrací D1). Počty se
 skloňují — „1 sad“ ani „5 sady“ zákazník vidět nesmí. Počítání s penězi
 zůstává na serveru v haléřích; tohle jen píše hotové číslo.
+
+Tvar řídí jazyk stránky: anglicky totéž volání napíše 12,345.5 · CZK 1,249 ·
+€4.90 · 25 Oct 2025 · Today. Vlastní formátování proto nepiš ani v angličtině.
+
+## Jazyky a měny
+
+Aplikace se prodávají i v zahraničí (Google Play), proto mluví jazykem
+zákazníka a ceny ukazují v jeho měně. Umí češtinu a angličtinu.
+
+**Jazyk.** Produkt to řekne v `<head>` a slova má ve `web/texty.js`:
+
+```html
+<meta name="simtegen-jazyky" content="cs en">
+…
+<body>
+<script src="simtegen.js"></script>
+<script src="texty.js"></script>
+```
+
+```js
+/* Texty produktu — klíč, česky a anglicky. */
+SimteGen.slovnik({
+  "cs": {"zakazka.ulozit": "Uložit zakázku", "zakazky.prazdne": "Zatím tu nic není.",
+         "sada": {"one": "sada", "few": "sady", "many": "sady", "other": "sad"}},
+  "en": {"zakazka.ulozit": "Save the order", "zakazky.prazdne": "Nothing here yet.",
+         "sada": {"one": "set", "other": "sets"}}
+});
+```
+
+- **Čeština zůstává v HTML** a prvek dostane klíč: `<button data-t="zakazka.ulozit">Uložit
+  zakázku</button>`. Atributy `data-t-placeholder`, `data-t-aria-label`, `data-t-title`,
+  `data-t-alt`. `simtegen.js` text vymění, i u prvků, které skript vloží později
+  (řádek seznamu, klon `<template>`); ikona v tlačítku zůstane.
+- **Text ze skriptu** přes `SimteGen.t("klic", {n: 3, nazev: "…"})`, počty přes
+  `SimteGen.pocet(n, "klic")` s tvary množného čísla (`one/few/many/other` česky,
+  `one/other` anglicky). Věty neskládej z kousků — slovosled se v jazycích liší;
+  celá věta s `{proměnnou}` je jeden klíč.
+- **Hláška ze serveru** se zákazníkovi neukazuje doslova, když produkt mluví víc
+  jazyky: API vrací i `kod` a stránka ukáže `SimteGen.t("chyba." + kod)`.
+- **Přepínač** `<div data-prepinac-jazyka></div>` patří do patičky nebo účtu —
+  kreslí ho `simtegen.js` (názvy jazyků v jejich vlastní řeči).
+- **Výběr:** ruční volba zákazníka, jinak jazyk prohlížeče (slovenský dostane
+  češtinu), jinak angličtina. `?jazyk=en` v adrese otevře stránku anglicky (tak
+  ji kontroluje CI). Produkt bez `simtegen-jazyky` je celý česky — i pruhy šablony.
+- **Angličtina** je přirozená, ne doslovný překlad: krátké věty, sloveso na
+  tlačítku („Save the order“), oslovení „you“, bez slangu. Jména a data
+  zákazníka (ukázková data) se nepřekládají.
+
+**Měna.** Ceník produktu je `web/cenik.json` a píše ho SimteGen podle majitelova
+schválení — stavitel ho needituje a ceny v jiných měnách nikdy nepočítá:
+
+```html
+<p><span data-cena="mesic"></span> <span data-cena-jednotka="mesic"></span></p>
+<div data-prepinac-meny></div>
+```
+
+- `simtegen.js` doplní částku v měně zákazníka: Česko Kč, Evropa EUR, jinde USD
+  (země z připojení, `/api/prostredi`; nikde se neukládá), ruční volba přepínačem
+  má přednost. Kreslí-li produkt ceny sám, vezme je ze `SimteGen.cenik()` a na
+  událost `sg-mena` je překreslí.
+- Položka, která v dané měně cenu nemá, se ukáže v Kč — nikdy přepočtená.
+- Platba v aplikaci z Google Play ukazuje cenu, kterou vrátí Google (`play.js`).
+
+Volbu jazyka a měny si prohlížeč pamatuje (`sg-volba`), jen když ji zákazník
+sám přepnul — zásady to uvádějí; jiné ukládání v prohlížeči tím nevzniká.
 
 ## Potvrzení a vrácení
 
@@ -428,7 +495,8 @@ a přenesené kB vidí i recenzent.
 Text je půlka rozhraní. Zákazník čte tlačítka a hlášky, ne kód.
 
 - **Tlačítko říká, co udělá:** sloveso a věc — „Uložit zakázku“, „Vydat
-  sadu“, „Stáhnout CSV“. Ne „OK“, „Ano“, „Potvrdit“ bez věci, ne anglicky.
+  sadu“, „Stáhnout CSV“. Ne „OK“, „Ano“, „Potvrdit“ bez věci, ne anglicky
+  na české obrazovce (angličtina patří do `texty.js`, viz Jazyky a měny).
   U nebezpečné akce věc vždy: „Smazat účet“.
 - **Hláška o chybě = co se stalo + co s tím:** „Zakázku se nepodařilo
   uložit — zkontrolujte připojení a zkuste to znovu.“ Nikdy „Chyba“,
@@ -509,6 +577,11 @@ Stránku navíc vykreslí v prohlížeči (`vizualni_kontrola.py`) na šířkác
 - **Text menší než 13 px** (mimo text uvnitř výkresu).
 - **Částku nebo datum v nečeském tvaru**: „1249 Kč“, „1249.50 Kč“, „2026-10-25“
   (piš přes `SimteGen.kc` a `SimteGen.datum`).
+- **Český text na anglické obrazovce** (`?jazyk=en`, každá obrazovka): písmena
+  ě š č ř ž ů ť ď ň mimo název produktu a mimo `lang="cs"`.
+- **Neúplný slovník** (`kontrola_jazyku.py`): klíč jen v jednom jazyce, jiné
+  `{proměnné}`, tvary množného čísla jen na jedné straně, klíč z `data-t` nebo
+  `SimteGen.t` mimo `texty.js`, stránka bez `texty.js`, produkt bez přepínače.
 - **Větu velkými písmeny** (víc než 24 znaků) **nebo v mono písmu** (víc
   než 40 znaků, převážně písmena).
 - Úvodní obrazovku, která se neukáže nebo nezmizí.
