@@ -223,7 +223,10 @@ def _zkontroluj_bezpecnost(manifest: dict, preskocit: set[Path]) -> list[str]:
         return ["chybí bezpecnostni_kontrola.py — je součást šablony (stavitel ho obnovuje při stavbě)."]
     import bezpecnostni_kontrola
 
-    return [f"bezpečnost: {c}" for c in bezpecnostni_kontrola.zkontroluj(Path.cwd(), manifest, preskocit)]
+    chyby, upozorneni = bezpecnostni_kontrola.zkontroluj_vse(Path.cwd(), manifest, preskocit)
+    for u in upozorneni:
+        print("Upozornění: bezpečnost:", u)
+    return [f"bezpečnost: {c}" for c in chyby]
 
 
 def _zkontroluj_vzhled() -> list[str]:
@@ -332,6 +335,19 @@ def _zkontroluj_jazyky() -> list[str]:
     return kontrola_jazyku.zkontroluj(WEB)
 
 
+def _upozorni_na_inline() -> None:
+    """bezpecnostni_kontrola.inline_skripty: pages with inline scripts or
+    on…= handlers. Printed, never a failure — builder-made pages have them,
+    and each one keeps 'unsafe-inline' in the CSP. A product that clears
+    the list can then drop it."""
+    if not Path("bezpecnostni_kontrola.py").exists():
+        return
+    import bezpecnostni_kontrola
+
+    for radek in bezpecnostni_kontrola.inline_skripty(Path.cwd()):
+        print("Upozornění: bezpečnost:", radek)
+
+
 def main() -> int:
     if not MANIFEST.exists():
         print("CHYBA: chybí data-manifest.json.")
@@ -373,6 +389,7 @@ def main() -> int:
                     if pattern in line:
                         violations.append(f"{path}:{number}: {pattern} ({line.strip()[:80]})")
 
+    _upozorni_na_inline()
     violations += _zkontroluj_design()
     violations += _zkontroluj_aplikaci(manifest)
     violations += _zkontroluj_seo(manifest)

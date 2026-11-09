@@ -417,13 +417,18 @@ Vlastní věta jde do `data-chyba`. O zbytek se postará `simtegen.js`:
 **Koncept** (rozepsané se neztratí): `<form data-formular data-koncept="zakazka">`.
 `simtegen.js` drží rozepsaný obsah v prohlížeči a při dalším otevření ho
 vrátí (nejvýš 30 dní); hesla, soubory a pole s `data-bez-konceptu` nikdy.
+Koncept patří přihlášenému účtu (klíč nese otisk účtu, ne e-mail) a odhlášení
+nebo smazání účtu smaže všechny koncepty v zařízení — `simtegen.js` to udělá
+sám po úspěšném `POST /api/odhlaseni` i `/api/ucet/smazat`, vlastní odhlášení
+jinou cestou zavolá `SimteGen.zapomenKoncepty()`. Koncept se vrací až po
+`/api/ja`: `f.obnoveno` platí potom, `await f.koncept` počká.
 Je to ukládání v prohlížeči, takže patří do manifestu — CI `data-koncept`
 bez něj odmítne:
 
 ```json
 "uloziste_v_prohlizeci": [{"nazev": "koncept-zakazka", "typ": "localStorage",
   "ucel": "rozepsaný formulář se drží v zařízení, aby se při zavření aplikace nebo výpadku signálu neztratil",
-  "trvani": "do odeslání formuláře, nejvýš 30 dní"}]
+  "trvani": "do odeslání formuláře, odhlášení nebo smazání účtu, nejvýš 30 dní"}]
 ```
 
 Koncept patří k delším formulářům, které se vyplňují v terénu (zakázka,
