@@ -1,0 +1,33 @@
+{
+ "meny": [
+  "CZK",
+  "EUR",
+  "USD"
+ ],
+ "polozky": [
+  {
+   "id": "p-2",
+   "ceny": {
+    "CZK": "129",
+    "EUR": "4.90",
+    "USD": "5.90"
+   },
+   "jednotka": {
+    "cs": "/ firma / měsíc",
+    "en": "per company per month"
+   }
+  },
+  {
+   "id": "p-3",
+   "ceny": {
+    "CZK": "449",
+    "EUR": "18.90",
+    "USD": "20.90"
+   },
+   "jednotka": {
+    "cs": "za firmu a měsíc",
+    "en": "per company per month"
+   }
+  }
+ ]
+}
