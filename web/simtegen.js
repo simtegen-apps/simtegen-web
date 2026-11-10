@@ -1620,8 +1620,83 @@
    * (uloziste_v_prohlizeci): CI data-koncept bez deklarace odmítne. Hesla,
    * soubory a pole s data-bez-konceptu se neukládají nikdy. Po úspěšném
    * uložení na server f.hotovo() koncept smaže.
+   *
+   * Koncept patří jednomu účtu: klíč nese otisk účtu (SHA-256 z e-mailu
+   * z /api/ja, nikdy e-mail sám), takže kolega na stejném telefonu cizí
+   * rozepsanou zakázku neuvidí. Odhlášení a smazání účtu smažou všechny
+   * koncepty v zařízení. Obnova proto přijde až po /api/ja: f.obnoveno
+   * se nastaví potom, f.koncept je Promise s tím samým výsledkem.
    */
   var KONCEPT_DNI = 30;
+  var KONCEPT = "sg-koncept:";
+  // The last signed-in account's fingerprint, so a draft still comes back
+  // when the signal is gone and /api/ja cannot answer (the reason drafts
+  // exist). A hash, and gone with the drafts on logout.
+  var KONCEPT_UCET = "sg-koncept-ucet";
+  var znackaSlib = null;
+
+  function hex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+      return (b < 16 ? "0" : "") + b.toString(16);
+    }).join("");
+  }
+
+  // "u<16 hex>" for a signed-in account, "-" for no account (signed out,
+  // a product without accounts). One /api/ja per page, shared by all forms.
+  function znackaUctu() {
+    if (znackaSlib) return znackaSlib;
+    znackaSlib = kdoJsem().then(function (k) {
+      if (k.stav === "prihlasen" && k.ja.email && window.crypto && crypto.subtle) {
+        var otisk = location.host + ":" + String(k.ja.email).trim().toLowerCase();
+        return crypto.subtle.digest("SHA-256", new TextEncoder().encode(otisk)).then(function (h) {
+          var znacka = "u" + hex(h).slice(0, 16);
+          try { localStorage.setItem(KONCEPT_UCET, znacka); } catch (e) { /* blocked storage */ }
+          return znacka;
+        });
+      }
+      if (k.stav === "offline") {
+        try { return localStorage.getItem(KONCEPT_UCET) || "-"; } catch (e) { return "-"; }
+      }
+      return "-";
+    }).catch(function () { return "-"; });
+    return znackaSlib;
+  }
+
+  // Every draft on this device, of every account, and the remembered
+  // fingerprint. Called on logout and account deletion (below and in the
+  // template's index.html); a shared phone keeps nothing of the one who left.
+  function zapomenKoncepty() {
+    znackaSlib = null;
+    try {
+      var klice = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf("sg-koncept") === 0) klice.push(k);
+      }
+      klice.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) { /* blocked storage: nothing was kept */ }
+  }
+
+  // Products built before this hook have their own logout and delete
+  // buttons in index.html, which the template never touches again — but
+  // this file reaches every product on its next build. So a successful
+  // POST to the template's two endpoints clears the drafts, whoever made
+  // the call.
+  if (window.fetch) {
+    var fetchPuvodni = window.fetch;
+    window.fetch = function (vstup, volby) {
+      var odpoved = fetchPuvodni.apply(window, arguments);
+      try {
+        var adresa = new URL(typeof vstup === "string" ? vstup : (vstup && vstup.url) || String(vstup), location.href);
+        var metoda = String((volby && volby.method) || (vstup && vstup.method) || "GET").toUpperCase();
+        if (metoda === "POST" && adresa.origin === location.origin &&
+            /^\/api\/(odhlaseni|ucet\/smazat)\/?$/.test(adresa.pathname)) {
+          odpoved.then(function (r) { if (r.ok) zapomenKoncepty(); }, function () { /* nothing happened */ });
+        }
+      } catch (e) { /* an address URL cannot parse is not ours */ }
+      return odpoved;
+    };
+  }
 
   function hlaskaPole(pole) {
     var v = pole.validity;
@@ -1692,8 +1767,14 @@
     return ok;
   }
 
-  function klicKonceptu(form) {
-    return "sg-koncept:" + location.pathname + ":" + form.getAttribute("data-koncept");
+  function klicKonceptu(form, znacka) {
+    return KONCEPT + znacka + ":" + location.pathname + ":" + form.getAttribute("data-koncept");
+  }
+
+  // Before per-account keys a draft had no owner; nobody can tell whose it
+  // is, so it is dropped rather than shown to whoever opens the form next.
+  function zahodStaryKoncept(form) {
+    try { localStorage.removeItem(KONCEPT + location.pathname + ":" + form.getAttribute("data-koncept")); } catch (e) { /* nothing */ }
   }
 
   function doKonceptu(el) {
@@ -1709,17 +1790,23 @@
       else if (el.type === "radio") { if (el.checked) data[el.name] = el.value; }
       else data[el.name] = el.value;
     });
-    try {
-      localStorage.setItem(klicKonceptu(form), JSON.stringify({ kdy: Date.now(), data: data }));
-    } catch (e) { /* full or blocked storage: the draft is a nicety */ }
+    var slib = znackaUctu();
+    slib.then(function (znacka) {
+      // Logged out meanwhile: the drafts were just cleared, keep it so.
+      if (slib !== znackaSlib) return;
+      try {
+        localStorage.setItem(klicKonceptu(form, znacka), JSON.stringify({ kdy: Date.now(), data: data }));
+      } catch (e) { /* full or blocked storage: the draft is a nicety */ }
+    });
   }
 
-  function obnovKoncept(form) {
+  function obnovKoncept(form, znacka) {
     var ulozeno = null;
-    try { ulozeno = JSON.parse(localStorage.getItem(klicKonceptu(form)) || "null"); } catch (e) { ulozeno = null; }
+    zahodStaryKoncept(form);
+    try { ulozeno = JSON.parse(localStorage.getItem(klicKonceptu(form, znacka)) || "null"); } catch (e) { ulozeno = null; }
     if (!ulozeno || !ulozeno.data) return false;
     if (Date.now() - (ulozeno.kdy || 0) > KONCEPT_DNI * 86400000) {
-      zahodKoncept(form);
+      try { localStorage.removeItem(klicKonceptu(form, znacka)); } catch (e) { /* nothing to drop */ }
       return false;
     }
     Array.prototype.forEach.call(form.elements, function (el) {
@@ -1737,7 +1824,9 @@
   }
 
   function zahodKoncept(form) {
-    try { localStorage.removeItem(klicKonceptu(form)); } catch (e) { /* nothing to drop */ }
+    znackaUctu().then(function (znacka) {
+      try { localStorage.removeItem(klicKonceptu(form, znacka)); } catch (e) { /* nothing to drop */ }
+    });
   }
 
   function formular(form) {
@@ -1746,6 +1835,10 @@
     form.noValidate = true;
     var koncept = form.hasAttribute("data-koncept");
     var casovac = null;
+    // Typed into before the draft could come back (/api/ja is a round trip
+    // away): the customer's fresh input wins, the draft stays untouched.
+    var dotceno = false;
+    var obnovuji = false;
 
     function kontroluj() {
       var prvniChybne = null;
@@ -1771,6 +1864,7 @@
       if (pole.hasAttribute && pole.hasAttribute("aria-invalid")) zkontrolujPole(pole);
       else if (e.type === "change" && pole.hasAttribute && pole.hasAttribute("data-sg-opusteno")) zkontrolujPole(pole);
       if (koncept) {
+        if (!obnovuji) dotceno = true;
         clearTimeout(casovac);
         casovac = setTimeout(function () { ulozKoncept(form); }, 400);
       }
@@ -1804,8 +1898,17 @@
           ukazChybu(pole, "");
         });
       },
-      obnoveno: koncept ? obnovKoncept(form) : false,
+      obnoveno: false,
+      koncept: Promise.resolve(false),
     };
+    if (koncept) {
+      api.koncept = znackaUctu().then(function (znacka) {
+        if (dotceno) return false;
+        obnovuji = true;
+        try { api.obnoveno = obnovKoncept(form, znacka); } finally { obnovuji = false; }
+        return api.obnoveno;
+      });
+    }
     form.sgFormular = api;
     return api;
   }
@@ -1860,7 +1963,7 @@
     slovnik: slovnik, preloz: preloz, nastavJazyk: nastavJazyk,
     cenik: cenik, mena: function () { return menaTed; }, nastavMenu: nastavMenu,
     potvrd: potvrd, zeptej: zeptej, vratitelne: vratitelne, doporucit: doporucit, formular: formular,
-    panel: otevriPanel, pruvodce: pruvodce };
+    zapomenKoncepty: zapomenKoncepty, panel: otevriPanel, pruvodce: pruvodce };
 
   /* Google Play v aplikaci — nákup předplatného a „Vyzkoušet ukázku“ —
    * žije v play.js: jen v produktu s modulem aplikace (<html data-aplikace>)
