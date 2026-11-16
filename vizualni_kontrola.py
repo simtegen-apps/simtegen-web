@@ -70,6 +70,32 @@ _KOMPRIMOVAT = {".html", ".htm", ".css", ".js", ".mjs", ".svg", ".json", ".txt",
 MAX_SNIMKU = 14           # what the reviewer can usefully look at in one turn
 SIROCE_OBRAZOVEK = 2      # screens shown at all three widths; the rest phone only
 MAX_PROBLEMU_NA_DRUH = 6  # per screen and kind — the first few say enough
+# DESIGN.md, Text: one explaining sentence, and all of them on one screen.
+MAX_SLOV_VETA = 20
+MAX_SLOV_PROZA = 50
+# The firm's own web (simtegen.com, firemni_web.py in SimteGen) is born from
+# this template and checked by it, but it is a shop window, not an app: a
+# catalogue with descriptions and an English privacy notice. The app word
+# limit above refused every update of it from 12. 11. 2026 — the daily bot
+# PR never opened. Everything else still applies to it. Known by the repo's
+# name (config SIMTEGEN_FIRMA_WEB_REPO, default below), never by a file in
+# the repo: a product cannot rename its repo, it could write a file.
+WEB_FIRMY_REPO = "simtegen-web"
+JEN_APLIKACE = {"texty_moc"}
+
+
+def je_web_firmy(root: Path) -> bool:
+    """In CI GitHub names the repo; in SimteGen's clone (a bot PR's check
+    before push) the origin remote does. Neither the builder nor the page
+    can change either."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        try:
+            repo = subprocess.run(["git", "-C", str(root), "remote", "get-url", "origin"],
+                                  capture_output=True, text=True, timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return repo.rstrip("/").removesuffix(".git").rsplit("/", 1)[-1] == WEB_FIRMY_REPO
 
 
 def najdi_prohlizec() -> str | None:
@@ -312,7 +338,7 @@ _MERENI = r"""
   const telefon = W < %(telefon)d;
   const out = {preteka: [], popisky: [], tlacitka: [], obrazky: [], kontrast: [], male: [],
                akce: [], drobne: [], kricici: [], format: [], tabindex: [], vykres: [],
-               texty_tlacitko: [], texty_technicke: [], texty_tykani: []};
+               texty_tlacitko: [], texty_technicke: [], texty_tykani: [], texty_moc: []};
   const vid = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return false;
@@ -492,9 +518,26 @@ _MERENI = r"""
       && getComputedStyle(el).backgroundColor === inkoust);
     if (hlavni.length > 1) out.akce.push(hlavni.slice(0, 4).map(popis).join(', '));
   }
+  // 9. Few words (DESIGN.md, Text): the owner called the v3 apps
+  // "přetextované" (12. 11. 2026). Explaining prose only — data rows,
+  // labels, buttons and the drawing are the app, not text to cut.
+  const slova = (s) => (s.match(/\p{L}[\p{L}\d'’-]*/gu) || []).length;
+  const PROZA = 'p, small, figcaption, .napoveda, .popis';
+  let proza = 0;
+  for (const el of koren.querySelectorAll(PROZA)) {
+    if (!vid(el) || el.closest('.sg-start, .sg-pruhy, .sg-ukazka-pruh, .sg-hlaseni, .panel, .toast, '
+                               + '.seznam-dilu, table, .platno, svg')) continue;
+    if (el.parentElement && el.parentElement.closest(PROZA)) continue;
+    const n = slova(el.innerText || '');
+    proza += n;
+    if (n > %(veta)d) pridej(out.texty_moc, popis(el) + ' — ' + n + ' slov (nejvýš %(veta)d)');
+  }
+  if (proza > %(proza)d) pridej(out.texty_moc, 'vysvětlujícího textu je na obrazovce ' + proza
+                                + ' slov (nejvýš %(proza)d)');
   return out;
 })()
-""" % {"telefon": TELEFON_DO, "max": MAX_PROBLEMU_NA_DRUH}
+""" % {"telefon": TELEFON_DO, "max": MAX_PROBLEMU_NA_DRUH,
+   "veta": MAX_SLOV_VETA, "proza": MAX_SLOV_PROZA}
 
 _DRUHY = {
     "preteka": "obsah přetéká do strany (vodorovné posouvání)",
@@ -514,6 +557,8 @@ _DRUHY = {
     "texty_technicke": "na obrazovce je technický text (undefined, null, Error, HTTP 500) — zákazník má vidět, "
                        "co se stalo a co s tím",
     "texty_tykani": "text tyká — zákazníkovi se vyká („Klikněte“, „váš“)",
+    "texty_moc": "moc vysvětlujícího textu — aplikace mluví tlačítky, nadpisy a daty; zkrať větu, odstavec pod "
+                 "nadpisem smaž (DESIGN.md, Text)",
     "fokus_skryty": "Tab skončí na prvku, který není vidět",
     "fokus_bez_znacky": "prvek po Tabu nemá viditelný fokus (outline, rámeček nebo stín)",
 }
@@ -769,8 +814,13 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
     soubor = profil / "DevToolsActivePort"
     konec = time.monotonic() + 60
     while True:
-        radky = (soubor.read_text(encoding="utf-8", errors="replace").split()
-                 if soubor.exists() else [])
+        try:
+            radky = soubor.read_text(encoding="utf-8", errors="replace").split()
+        except OSError:
+            # Not there yet — or, on Windows, there and still held open by
+            # the browser writing it (PermissionError): seen on the CI runner,
+            # where it failed the whole check. Either way: not ready, ask again.
+            radky = []
         if len(radky) >= 2:
             break
         if proces.poll() is not None or time.monotonic() > konec:
@@ -931,6 +981,7 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
         return [], [], "prohlížeč nenalezen — vizuální kontrola přeskočena"
 
     problemy: list[str] = []
+    vynechat = JEN_APLIKACE if je_web_firmy(root) else set()
     # (page, scheme, kind, item) -> where it was seen. A shared footer is
     # one problem, not fourteen — the first real product printed it per screen.
     nalezy: dict[tuple, dict[str, list[str]]] = {}
@@ -1041,7 +1092,7 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
                         if schema == "light" and nazev == "telefon" and not dt.js(_HLASENI_VIDET):
                             bez_hlaseni.append(obrazovka or stranka.name)
                         for druh, popis in _DRUHY.items():
-                            if schema == "dark" and druh != "kontrast":
+                            if (schema == "dark" and druh != "kontrast") or druh in vynechat:
                                 continue
                             for polozka in nalez.get(druh) or ():
                                 kde_nalez = nalezy.setdefault((stranka.name, schema, popis, polozka),
@@ -1333,6 +1384,28 @@ def _sloz(dt: _DevTools, zaklad: str, sablona: tuple, stitek: str, titulek: str,
     return base64.b64decode(data)
 
 
+# What the store pictures are made of: everything that can change a screen
+# (pages, styles, scripts, API, schema, demo data, the manifest) plus the
+# composition itself (this file). Not the pictures' bytes: demo data with
+# relative dates ("Dnes") changes the pixels every day while the app looks
+# the same — and every listing change of a live app goes to Google review.
+_MIMO_OTISK = {".git", ".github", "node_modules", ".wrangler", "uat", "docs"}
+
+
+def otisk_zdroju(root: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n"))
+    for cesta in sorted(root.rglob("*")):
+        cast = cesta.relative_to(root)
+        if (not cesta.is_file() or set(cast.parts) & _MIMO_OTISK or cesta.suffix == ".md"
+                or cast.as_posix() == "play/co_je_noveho.txt"):
+            continue
+        h.update(b"\0" + cast.as_posix().encode("utf-8") + b"\0")
+        h.update(cesta.read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()
+
+
 def obchod(root: Path, vystup: Path) -> list[str]:
     """The store listing's pictures into `vystup`; returns the file names.
 
@@ -1355,6 +1428,12 @@ def obchod(root: Path, vystup: Path) -> list[str]:
     snimky = [s for s in aplikace.get("snimky") or [] if isinstance(s, dict)][:MAX_SNIMKU_OBCHODU]
     nazev = str(aplikace.get("nazev") or manifest.get("produkt") or "")
     vystup.mkdir(parents=True, exist_ok=True)
+    # Before any of the product's code runs here: the release compares it
+    # with the last upload and refreshes the pictures only when it moved.
+    (vystup / "otisk.txt").write_text(otisk_zdroju(root) + "\n", encoding="utf-8")
+    soubory_otisk = ["otisk.txt"]
+    en = aplikace.get("en") if isinstance(aplikace.get("en"), dict) else None
+    en_snimky = [s for s in (en or {}).get("snimky") or [] if isinstance(s, dict)]
     exe = najdi_prohlizec()
     if exe is None:
         raise RuntimeError("na stroji není Chrome, Chromium ani Edge")
@@ -1421,10 +1500,37 @@ def obchod(root: Path, vystup: Path) -> list[str]:
             veta = str(aplikace.get("hlavni_veta") or aplikace.get("popis") or nazev)
             (vystup / "grafika.jpg").write_bytes(_sloz(dt, zaklad, _GRAFIKA, nazev, veta, prvni))
             soubory.append("grafika.jpg")
+            # The English listing: the same screens and clicks, the app
+            # switched to English (?jazyk=en, as the visual check does), the
+            # words from aplikace.en. Only with a word for every shot — a
+            # half-English set would be worse than none.
+            if en and snimky and len(en_snimky) == len(snimky):
+                vystup_en = vystup / "en-US"
+                vystup_en.mkdir(exist_ok=True)
+                url_en = url + "?jazyk=en"
+                telefony_en = [_vyfot_obrazovku(dt, url_en, s, _TELEFON_SNIMEK) for s in snimky]
+                for poradi, (s, slova, data) in enumerate(zip(snimky, en_snimky, telefony_en), 1):
+                    obraz = _sloz(dt, zaklad, _TELEFON, f"{poradi:02d} — {slova.get('stitek', '')}",
+                                  str(slova.get("titulek") or ""), data)
+                    (vystup_en / f"telefon-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"en-US/telefon-{poradi}.jpg")
+                tablety_en = [(slova, _vyfot_obrazovku(dt, url_en, s, _TABLET_SNIMEK))
+                              for s, slova in zip(snimky, en_snimky) if s.get("tablet")][:MAX_TABLETU]
+                for poradi, (slova, data) in enumerate(tablety_en, 1):
+                    obraz = _sloz(dt, zaklad, _TABLET, str(slova.get("stitek") or ""),
+                                  str(slova.get("titulek") or ""), data)
+                    (vystup_en / f"tablet-{poradi}.jpg").write_bytes(obraz)
+                    soubory.append(f"en-US/tablet-{poradi}.jpg")
+                nazev_en = str(en.get("nazev") or nazev)
+                veta_en = str(en.get("hlavni_veta") or en.get("popis") or nazev_en)
+                (vystup_en / "grafika.jpg").write_bytes(
+                    _sloz(dt, zaklad, _GRAFIKA, nazev_en, veta_en, telefony_en[0]))
+                soubory.append("en-US/grafika.jpg")
             ikona = root / "web" / "ikona-512.png"
             if ikona.exists():
                 shutil.copy(ikona, vystup / "ikona.png")
                 soubory.append("ikona.png")
+            soubory += soubory_otisk
         finally:
             if dt is not None:
                 try:

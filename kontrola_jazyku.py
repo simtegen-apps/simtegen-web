@@ -11,7 +11,7 @@ JSON — so this check reads exactly what the browser runs. It refuses:
   - a data-t / data-t-* / SimteGen.t("…") key missing from the Czech words
     (the page would show the bare key),
   - a declaring page that does not load texty.js, or a product with no
-    switch (data-prepinac-jazyka) — a customer whose browser guessed wrong
+    switch outside a footer (data-prepinac-jazyka) — a customer whose browser guessed wrong
     must be able to change it.
 
 What it cannot see — Czech written straight into an English screen — the
@@ -79,9 +79,12 @@ def zkontroluj(web: Path) -> list[str]:
         if not re.search(r'<script\s+src=["\']texty\.js["\']', stranky[p]):
             chyby.append(f"web/{p.name}: hlásí jazyky {' '.join(js)}, ale nenačítá texty.js "
                          "(hned za simtegen.js)")
-    if not any("data-prepinac-jazyka" in t for t in stranky.values()):
-        chyby.append("web/: produkt mluví víc jazyky, ale nikde není přepínač — "
-                     "<div data-prepinac-jazyka></div> do patičky nebo účtu")
+    # The switch is a settings row in the account (12. 11. 2026), never a
+    # footer bar: one in a footer draws nothing, so it does not count.
+    bez_paticek = [re.sub(r"<footer\b.*?</footer>", "", t, flags=re.S | re.I) for t in stranky.values()]
+    if not any("data-prepinac-jazyka" in t for t in bez_paticek):
+        chyby.append("web/: produkt mluví víc jazyky, ale v účtu (nastavení) není přepínač — "
+                     "<div data-prepinac-jazyka></div> do obrazovky Účet, ne do patičky")
 
     cesta = web / "texty.js"
     if not cesta.exists():
