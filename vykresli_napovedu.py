@@ -14,8 +14,18 @@ and, for "Časté otázky", by SimteGen's bot PR from repeated questions
     {
       "uvod":    "1–2 sentences: what the tool does and for whom",
       "temata":  [{"nadpis": "Jak přidat zakázku", "text": "…"}],      1–12
-      "otazky":  [{"otazka": "Jak smažu účet?", "odpoved": "…"}]       0–30
+      "otazky":  [{"otazka": "Jak smažu účet?", "odpoved": "…"}],      0–30
+      "en":      {"uvod": "…", "temata": […], "otazky": […]}          optional
     }
+
+"en" (batch B2, 14. 11. 2026) is the same help in English, for a product
+that speaks English (simtegen-jazyky). One page carries both: each language
+in its own block with lang="cs"/"en", simtegen.js picks by the app's
+language and the chrome (back link, headings, footer) switches with data-t.
+Without "en" the page is exactly what it always was — a Czech-only product
+does not turn red in CI because the generator learned English. CI checks
+"en" when it is there; that a bilingual product HAS it is SimteGen's
+build gate (stavitel._napoveda_chybi), not CI's, for the same reason.
 
 In "text" and "odpoved" an empty line starts a new paragraph and lines
 starting with "- " become a list. No HTML, no links: the page is the
@@ -74,23 +84,34 @@ def chyby(data: dict) -> list[str]:
     """What is wrong with napoveda.json, as sentences for the builder."""
     if "_chyba" in data:
         return [data["_chyba"]]
+    out = _chyby_casti(data, "")
+    if "en" in data:
+        en = data["en"]
+        if not isinstance(en, dict):
+            out.append("napoveda.json: „en“ musí být objekt (uvod, temata, otazky — anglicky).")
+        else:
+            out += _chyby_casti(en, "en: ")
+    return out
+
+
+def _chyby_casti(data: dict, predpona: str) -> list[str]:
     out = []
 
     def pole(kde: str, klic: str, hodnota) -> None:
         if not isinstance(hodnota, str) or not hodnota.strip():
-            out.append(f"napoveda.json: {kde} — chybí text „{klic}“.")
+            out.append(f"napoveda.json: {predpona}{kde} — chybí text „{klic}“.")
         elif len(hodnota) > _LIMITY[klic]:
-            out.append(f"napoveda.json: {kde} — „{klic}“ má víc než {_LIMITY[klic]} znaků.")
+            out.append(f"napoveda.json: {predpona}{kde} — „{klic}“ má víc než {_LIMITY[klic]} znaků.")
         elif _ZAKAZANE.search(hodnota):
-            out.append(f"napoveda.json: {kde} — jen obyčejný text: bez HTML, odkazů a e-mailů.")
+            out.append(f"napoveda.json: {predpona}{kde} — jen obyčejný text: bez HTML, odkazů a e-mailů.")
 
     pole("úvod", "uvod", data.get("uvod"))
     temata, otazky = data.get("temata"), data.get("otazky", [])
     if not isinstance(temata, list) or not 1 <= len(temata) <= 12:
-        out.append("napoveda.json: „temata“ musí být seznam 1–12 témat (nadpis + text).")
+        out.append(f"napoveda.json: {predpona}„temata“ musí být seznam 1–12 témat (nadpis + text).")
         temata = []
     if not isinstance(otazky, list) or len(otazky) > 30:
-        out.append("napoveda.json: „otazky“ musí být seznam nejvýš 30 otázek (otazka + odpoved).")
+        out.append(f"napoveda.json: {predpona}„otazky“ musí být seznam nejvýš 30 otázek (otazka + odpoved).")
         otazky = []
     for n, t in enumerate(temata, 1):
         t = t if isinstance(t, dict) else {}
@@ -125,29 +146,38 @@ def _nazev(root: Path) -> str:
     return " ".join(str(manifest.get("produkt") or aplikace.get("nazev") or "Aplikace").split())
 
 
+def _faq(otazky: list, jazyk: str) -> str:
+    faq = {"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": jazyk,
+           "mainEntity": [{"@type": "Question", "name": " ".join(q["otazka"].split()),
+                           "acceptedAnswer": {"@type": "Answer", "text": " ".join(q["odpoved"].split())}}
+                          for q in otazky]}
+    ld = json.dumps(faq, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    return f'  <script type="application/ld+json">{ld}</script>'
+
+
 def _hlava(data: dict, nazev: str) -> str:
     """For search engines and the AI chats behind them: a description, and
     the questions as schema.org FAQPage — the page's own words, so nothing
     the customer cannot read. Texts are plain by chyby() (no "<"); "</" is
-    escaped anyway, the script element must not close early."""
+    escaped anyway, the script element must not close early. With "en":
+    the language list for simtegen.js and the English questions too."""
     uvod = " ".join(str(data.get("uvod") or "").split())
     popis = f"Nápověda k aplikaci {nazev}: {uvod}"
     if len(popis) > 160:
         popis = popis[:159].rsplit(" ", 1)[0] + "…"
     radky = [f'  <meta name="description" content="{html.escape(popis, quote=True)}">']
+    en = data.get("en") if isinstance(data.get("en"), dict) else None
+    if en:
+        radky.insert(0, '  <meta name="simtegen-jazyky" content="cs en">')
     if data.get("otazky"):
-        faq = {"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": "cs",
-               "mainEntity": [{"@type": "Question", "name": " ".join(q["otazka"].split()),
-                               "acceptedAnswer": {"@type": "Answer", "text": " ".join(q["odpoved"].split())}}
-                              for q in data["otazky"]]}
-        ld = json.dumps(faq, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-        radky.append(f'  <script type="application/ld+json">{ld}</script>')
+        radky.append(_faq(data["otazky"], "cs"))
+    if en and en.get("otazky"):
+        radky.append(_faq(en["otazky"], "en"))
     return "\n".join(radky) + "\n"
 
 
-def stranka(data: dict, nazev: str) -> str:
-    n = html.escape(nazev, quote=True)
-    sekce = []
+def _obsah(data: dict, nadpis_otazek: str) -> str:
+    sekce = [f'      <section class="karta">\n{_odstavce(data["uvod"], "        ")}\n      </section>']
     for t in data.get("temata") or []:
         sekce.append(f'      <section>\n        <h2 class="sekce-titulek">{html.escape(t["nadpis"].strip())}</h2>\n'
                      f'        <div class="karta">\n{_odstavce(t["text"], "          ")}\n        </div>\n'
@@ -156,9 +186,31 @@ def stranka(data: dict, nazev: str) -> str:
         otazky = "\n".join(
             f'        <details class="karta">\n          <summary>{html.escape(q["otazka"].strip())}</summary>\n'
             f'{_odstavce(q["odpoved"], "          ")}\n        </details>' for q in data["otazky"])
-        sekce.append(f'      <section>\n        <h2 class="sekce-titulek">Časté otázky</h2>\n{otazky}\n'
+        sekce.append(f'      <section>\n        <h2 class="sekce-titulek">{nadpis_otazek}</h2>\n{otazky}\n'
                      "      </section>")
-    telo = "\n".join(sekce)
+    return "\n".join(sekce)
+
+
+def _odsad(text: str, kolik: str) -> str:
+    return "\n".join(kolik + r if r else r for r in text.split("\n"))
+
+
+def stranka(data: dict, nazev: str) -> str:
+    n = html.escape(nazev, quote=True)
+    en = data.get("en") if isinstance(data.get("en"), dict) else None
+    if en:
+        # Two blocks; the one not in the app's language is hidden by styl.css
+        # (html[lang]) — and its lang tells the English-page check which
+        # text is not meant to be English.
+        obsah = (f'      <div lang="cs" data-jazyk-napovedy="cs">\n{_odsad(_obsah(data, "Časté otázky"), "  ")}\n'
+                 f'      </div>\n      <div lang="en" data-jazyk-napovedy="en">\n'
+                 f'{_odsad(_obsah(en, "Frequently asked questions"), "  ")}\n      </div>')
+        t = {k: f' data-t="sg.napoveda{k}"' for k in ("", ".zpet", ".zasady")}
+        t["nahlasit"] = ' data-t="sg.napoveda.nahlasit"'
+        t["nahlasit_aria"] = ' data-t-aria-label="sg.napoveda.nahlasit"'
+    else:
+        obsah = _obsah(data, "Časté otázky")
+        t = {"": "", ".zpet": "", ".zasady": "", "nahlasit": "", "nahlasit_aria": ""}
     return f"""<!doctype html>
 <!-- GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: napoveda.json, generátor: vykresli_napovedu.py. -->
 <html lang="cs">
@@ -175,26 +227,23 @@ def stranka(data: dict, nazev: str) -> str:
   <div class="appka">
     <nav class="navigace" aria-label="Hlavní menu">
       <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">SimteGen</span></a>
-      <a href="/">Zpět do aplikace</a>
-      <a href="napoveda.html" aria-current="page">Nápověda</a>
+      <a href="/"{t[".zpet"]}>Zpět do aplikace</a>
+      <a href="napoveda.html" aria-current="page"{t[""]}>Nápověda</a>
       <span class="mezera"></span>
-      <button class="nahlasit-chybu" type="button">Nahlásit chybu</button>
+      <button class="nahlasit-chybu" type="button"{t["nahlasit"]}>Nahlásit chybu</button>
     </nav>
     <header class="hlavicka">
-      <h1>Nápověda</h1>
-      <button type="button" class="nahlasit-chybu jen-telefon" aria-label="Nahlásit chybu">
+      <h1{t[""]}>Nápověda</h1>
+      <button type="button" class="nahlasit-chybu jen-telefon" aria-label="Nahlásit chybu"{t["nahlasit_aria"]}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
       </button>
     </header>
     <main class="obsah">
-      <section class="karta">
-{_odstavce(data["uvod"], "        ")}
-      </section>
-{telo}
+{obsah}
     </main>
     <footer class="paticka">
-      <a href="/">Zpět do aplikace</a>
-      <a href="zasady.html">Zásady zpracování údajů</a>
+      <a href="/"{t[".zpet"]}>Zpět do aplikace</a>
+      <a href="zasady.html"{t[".zasady"]}>Zásady zpracování údajů</a>
     </footer>
   </div>
 </body>

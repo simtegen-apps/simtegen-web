@@ -87,6 +87,14 @@ SNIMKY_POCET = (3, 6)
 TITULEK_DELKA = (8, 40)
 STITEK_DELKA = 24
 HLAVNI_VETA_DELKA = (12, 60)
+# Google Play's own limits for a listing's texts (title, short, full).
+NAZEV_OBCHODU_DELKA = 30
+POPIS_OBCHODU_DELKA = 80
+DLOUHY_POPIS_DELKA = 4000
+# The language a listing is written in, as Google Play names it. English is
+# the store's default for a product that speaks it: the apps are for the
+# whole world, Czech is the translation (Czech users still see Czech).
+JAZYK_EN = "en-US"
 CO_JE_NOVEHO = Path("play") / "co_je_noveho.txt"
 CO_JE_NOVEHO_DELKA = 500          # Google's limit for release notes
 UKAZKA = Path("play") / "ukazka.json"
@@ -249,12 +257,19 @@ ZDROJE_MIGRACE = Path("db") / "migrace" / "0910_zdroje.sql"
 CHYBY_PLAY = {"entita": "počty chyb aplikace (souhrnně, bez vazby na osobu)",
               "play_typy": ["diagnostika"], "play_ucely": ["funkce", "analytika"], "play_volitelne": False}
 CHYBY_MIGRACE = Path("db") / "migrace" / "0930_chyby_stranek.sql"
+# The one-tap "why not carry on" answer (odchod.js): an optional in-app
+# action, counted without the account — declared all the same, like the
+# script errors: Data safety is no place to argue what "anonymous" means.
+ODCHODY_PLAY = {"entita": "důvody, proč zákazníci nepokračují (souhrnně, bez vazby na osobu)",
+                "play_typy": ["akce_v_aplikaci"], "play_ucely": ["analytika"], "play_volitelne": True}
+ODCHODY_MIGRACE = Path("db") / "migrace" / "0960_odchody.sql"
 
 
 def _polozky_play(manifest: dict) -> list[dict]:
     return ([u for u in manifest.get("ukladame") or [] if isinstance(u, dict)] + [HLASENI_PLAY]
             + ([ZDROJE_PLAY] if ZDROJE_MIGRACE.exists() else [])
-            + ([CHYBY_PLAY] if CHYBY_MIGRACE.exists() else []))
+            + ([CHYBY_PLAY] if CHYBY_MIGRACE.exists() else [])
+            + ([ODCHODY_PLAY] if ODCHODY_MIGRACE.exists() else []))
 
 
 def _bezpecnost_dat(manifest: dict) -> dict:
@@ -283,11 +298,45 @@ def _bezpecnost_dat(manifest: dict) -> dict:
     }
 
 
+def mluvi_anglicky(web: Path = Path("web")) -> bool:
+    """Does the product speak English (<meta name="simtegen-jazyky"> on its
+    start page, the same claim the visual check and the language check
+    read)? Then its store listing must speak it too."""
+    stranka = web / "index.html"
+    if not stranka.exists():
+        return False
+    m = re.search(r'<meta\s+name=["\']simtegen-jazyky["\']\s+content=["\']([^"\']*)["\']',
+                  stranka.read_text(encoding="utf-8"))
+    # "cs en" as the products write it; a comma is read too, as simtegen.js
+    # and vizualni_kontrola.jazyky_stranky do.
+    return bool(m) and "en" in re.split(r"[\s,]+", m.group(1))
+
+
+def _preklady(a: dict) -> dict:
+    """The English listing (aplikace.en) in the shape of the Czech one —
+    only when it is there; its shape is the CI's job (_chyby_en)."""
+    en = a.get("en")
+    if not isinstance(en, dict) or not str(en.get("nazev") or "").strip():
+        return {}
+    return {JAZYK_EN: {
+        "nazev": str(en.get("nazev") or ""),
+        "kratky_popis": str(en.get("popis") or ""),
+        "dlouhy_popis": str(en.get("dlouhy_popis") or ""),
+        "hlavni_veta": str(en.get("hlavni_veta") or ""),
+        "snimky": [s for s in en.get("snimky") or [] if isinstance(s, dict)],
+    }}
+
+
 def _zaznam(manifest: dict) -> dict:
     a = manifest["aplikace"]
     ucty = any(u.get("entita") == "uzivatele" for u in manifest.get("ukladame") or [] if isinstance(u, dict))
+    preklady = _preklady(a)
     return {
         "jazyk": "cs-CZ",
+        # The store's default language: English when there is an English
+        # listing (whoever is not Czech sees it), Czech otherwise.
+        "vychozi": JAZYK_EN if preklady else "cs-CZ",
+        "preklady": preklady,
         "nazev": str(a.get("nazev") or ""),
         "kratky_popis": str(a.get("popis") or ""),
         "dlouhy_popis": str(a.get("dlouhy_popis") or ""),
@@ -902,12 +951,52 @@ def _chyby_obchodu(manifest: dict) -> list[str]:
             chyby.append(f"aplikace.snimky[{i}].kliky je seznam nejvýš 3 CSS selektorů.")
     if snimky and not any(isinstance(s, dict) and s.get("tablet") for s in snimky):
         chyby.append("aplikace.snimky: aspoň jeden snímek označ „tablet“: true — z něj vznikne snímek tabletu.")
+    nazev = str(a.get("nazev") or "")
+    if len(nazev) > NAZEV_OBCHODU_DELKA:
+        chyby.append(f"aplikace.nazev má nejvýš {NAZEV_OBCHODU_DELKA} znaků (limit názvu v Google Play).")
+    chyby += _chyby_en(a, len(snimky))
     if CO_JE_NOVEHO.exists():
         text = CO_JE_NOVEHO.read_text(encoding="utf-8").strip()
         if not text or len(text) > CO_JE_NOVEHO_DELKA:
             chyby.append(f"play/co_je_noveho.txt musí mít 1–{CO_JE_NOVEHO_DELKA} znaků (limit Google Play).")
     if (Path("db")).exists():
         chyby += _chyby_ukazky()
+    return chyby
+
+
+def _chyby_en(a: dict, pocet_snimku: int) -> list[str]:
+    """aplikace.en — the English listing. Required once the product speaks
+    English (simtegen-jazyky): the apps are for the whole world and the
+    store shows English to everyone who is not Czech. Its screenshots are
+    the same screens (the same clicks), photographed in English, so it
+    carries only their words."""
+    en = a.get("en")
+    if en is None:
+        if mluvi_anglicky():
+            return ["aplikace.en chybí — produkt mluví anglicky, takže záznam v obchodě musí taky "
+                    "(výchozí jazyk obchodu je angličtina): {nazev, popis, dlouhy_popis, hlavni_veta, "
+                    "snimky: [{stitek, titulek}] ve stejném pořadí jako aplikace.snimky}."]
+        return []
+    if not isinstance(en, dict):
+        return ["aplikace.en musí být objekt {nazev, popis, dlouhy_popis, hlavni_veta, snimky}."]
+    chyby = []
+    for pole, (od, do) in (("nazev", (1, NAZEV_OBCHODU_DELKA)), ("popis", (1, POPIS_OBCHODU_DELKA)),
+                           ("dlouhy_popis", (1, DLOUHY_POPIS_DELKA)), ("hlavni_veta", HLAVNI_VETA_DELKA)):
+        if not od <= len(str(en.get(pole) or "").strip()) <= do:
+            chyby.append(f"aplikace.en.{pole} musí mít {od}–{do} znaků.")
+    snimky = en.get("snimky")
+    if not isinstance(snimky, list) or len(snimky) != pocet_snimku:
+        chyby.append(f"aplikace.en.snimky musí mít {pocet_snimku} položek {{stitek, titulek}} — "
+                     "stejné obrazovky ve stejném pořadí jako aplikace.snimky, jen anglicky.")
+        return chyby
+    for i, s in enumerate(snimky, 1):
+        if not isinstance(s, dict):
+            chyby.append(f"aplikace.en.snimky[{i}] musí být objekt {{stitek, titulek}}.")
+            continue
+        if not TITULEK_DELKA[0] <= len(str(s.get("titulek") or "").strip()) <= TITULEK_DELKA[1]:
+            chyby.append(f"aplikace.en.snimky[{i}].titulek musí mít {TITULEK_DELKA[0]}–{TITULEK_DELKA[1]} znaků.")
+        if not str(s.get("stitek") or "").strip() or len(str(s.get("stitek"))) > STITEK_DELKA:
+            chyby.append(f"aplikace.en.snimky[{i}].stitek musí mít 1–{STITEK_DELKA} znaků.")
     return chyby
 
 
