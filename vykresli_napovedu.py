@@ -208,9 +208,16 @@ def stranka(data: dict, nazev: str) -> str:
         t = {k: f' data-t="sg.napoveda{k}"' for k in ("", ".zpet", ".zasady")}
         t["nahlasit"] = ' data-t="sg.napoveda.nahlasit"'
         t["nahlasit_aria"] = ' data-t-aria-label="sg.napoveda.nahlasit"'
+        # Every page that declares two languages loads the product's
+        # dictionary right after simtegen.js (kontrola_jazyku.py). Without it
+        # the generated page failed that check, which no builder can fix by
+        # hand — build 18 went round six times between "napoveda.json has
+        # no English" and "napoveda.html does not load texty.js" (17. 11. 2026).
+        texty = '\n  <script src="texty.js"></script>'
     else:
         obsah = _obsah(data, "Časté otázky")
         t = {"": "", ".zpet": "", ".zasady": "", "nahlasit": "", "nahlasit_aria": ""}
+        texty = ""
     return f"""<!doctype html>
 <!-- GENEROVANÝ SOUBOR — neupravuj ručně. Zdroj: napoveda.json, generátor: vykresli_napovedu.py. -->
 <html lang="cs">
@@ -223,7 +230,7 @@ def stranka(data: dict, nazev: str) -> str:
   <link rel="stylesheet" href="produkt.css">
 </head>
 <body>
-  <script src="simtegen.js"></script>
+  <script src="simtegen.js"></script>{texty}
   <div class="appka">
     <nav class="navigace" aria-label="Hlavní menu">
       <a class="znacka" href="/" aria-label="SimteGen"><span class="znacka-ctverec"></span><span class="znacka-slovo">SimteGen</span></a>
