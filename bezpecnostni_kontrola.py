@@ -136,6 +136,11 @@ _PRESKOCIT_ADRESARE = {".git", "node_modules", "__pycache__", ".wrangler"}
 
 _CSP_NUTNE = ("default-src 'self'", "connect-src 'self'", "object-src 'none'",
               "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'")
+# connect-src: our own /api/ and the one address Chrome checks the Play
+# Billing payment method against (without it no in-app purchase can even
+# start — 19. 11. 2026). An exact path, not the domain; anything else there
+# is a door for a smuggled script to send data out.
+_CONNECT_POVOLENE = {"'self'", "https://play.google.com/billing"}
 # The rest of the set (header, what its value must contain). Both templates
 # and the firm's web carry them; a product without a database has no
 # accounts, but its pages still run scripts and send the report form.
@@ -405,7 +410,9 @@ def _argument(text: str, start: int) -> tuple[str, int]:
     return text[start:], len(text)
 
 
-_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|\$\{[^}]*\}|[^`\\])*`', re.S)
+# Unambiguous alternatives: "$" is either the start of "${…}" or a plain
+# character, never both — CodeQL's ReDoS warning (security audit 19. 11. 2026).
+_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|\$\{[^}]*\}|\$(?!\{)|[^`\\$])*`', re.S)
 
 
 _KONSTANTA = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -473,7 +480,7 @@ def _sql_z_argumentu(arg: str, konstanty: dict[str, str],
             sql += obsah
         elif _KONSTANTA.match(token) and token in konstanty:
             sql += konstanty[token]
-        elif re.match(r"^\w+\((?:\s*(?:\x00|\d+)\s*,?)*\)$", token):
+        elif re.match(r"^\w+\((?:\s*+(?:\x00|\d++)\s*+,?+)*+\)$", token):  # possessive: no ReDoS (3.11+)
             # Helper with literal arguments; its literals were masked above.
             for _ in range(token.count("\x00")):
                 next(literaly)
@@ -791,6 +798,11 @@ def _zkontroluj_hlavicky(root: Path) -> list[str]:
     if "Content-Security-Policy" not in text or chybi:
         chyby.append(f"web/_headers: Content-Security-Policy nemá {', '.join(chybi) or 'hlavičku'} — "
                      "soubor je ze šablony, neupravuje se.")
+    m = re.search(r"connect-src([^;\n]*)", text)
+    cizi = sorted(set(m.group(1).split()) - _CONNECT_POVOLENE) if m else []
+    if cizi:
+        chyby.append(f"web/_headers: connect-src povoluje {', '.join(cizi)} — smí jen 'self' a "
+                     "https://play.google.com/billing; soubor je ze šablony, neupravuje se.")
     for jmeno, hodnota in _HLAVICKY_NUTNE:
         m = re.search(rf"^\s*{jmeno}\s*:(.*)$", text, re.MULTILINE | re.IGNORECASE)
         if not m or hodnota not in m.group(1):

@@ -106,6 +106,9 @@
       "sg.objednavka.mimo": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
       "sg.objednavka.mimo_play": "Objednávka na fakturu je zatím jen pro zákazníky v Česku. Předplatné si koupíte v aplikaci pro Android (Google Play).",
       "sg.chyba.objednavka_jen_cesko": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
+      "sg.chyba.plati_play": "Předplatné vám běží přes Google Play — platí se tam a tam se i ruší.",
+      "sg.chyba.ukazka_neobjednava": "V ukázce se nic neobjednává.",
+      "sg.chyba.zrus_play": "Předplatné v Google Play se dál obnovuje. Nejdřív ho zrušte v Google Play (Spravovat předplatné), pak otevřete aplikaci a účet smažte.",
       "sg.ukazka.pruh": "V účtu máte ukázková data — vymyšlené záznamy, ať je vidět, jak aplikace vypadá " +
         "v provozu. Až si zapíšete vlastní, ukázku odstraňte.",
       "sg.ukazka.odstranit": "Odstranit ukázková data",
@@ -204,6 +207,9 @@
       "sg.objednavka.mimo": "Invoice orders are only available to customers in Czechia for now.",
       "sg.objednavka.mimo_play": "Invoice orders are only available to customers in Czechia for now. You can subscribe in the Android app (Google Play).",
       "sg.chyba.objednavka_jen_cesko": "Invoice orders are only available to customers in Czechia for now.",
+      "sg.chyba.plati_play": "Your subscription runs through Google Play — it is paid and cancelled there.",
+      "sg.chyba.ukazka_neobjednava": "Nothing is ordered in the demo.",
+      "sg.chyba.zrus_play": "Your Google Play subscription still renews. Cancel it in Google Play first (Manage subscription), then open the app and delete the account.",
       "sg.ukazka.pruh": "Your account holds sample data — made-up records that show the app at work. " +
         "Once you enter your own, remove the sample.",
       "sg.ukazka.odstranit": "Remove sample data",
@@ -489,6 +495,39 @@
     });
   }
 
+  // The legal pages in the app's language. A product that speaks English
+  // gets privacy.html and terms.html from the template's generator (audit
+  // before Play production, 18. 11. 2026); its footer still links the Czech
+  // files, so an English customer was sent to Czech legal text.
+  // Only where the English pages exist: a product from the storage-free
+  // template has a hand-made Czech policy and nothing else. Read, not just
+  // asked for: Cloudflare Pages answers a missing page with index.html and
+  // 200, so only the generator's own header and lang="en" prove it.
+  var PRAVNI_EN = { "zasady.html": "privacy.html", "podminky.html": "terms.html" };
+  var pravniEnExistuje = null;
+  function pravniVJazyce(koren) {
+    if (jazyk !== "en" || produktJazyky.indexOf("en") < 0 || !koren || !koren.querySelectorAll) return;
+    var odkazy = Array.prototype.filter.call(koren.querySelectorAll("a[href]"), function (a) {
+      var h = a.getAttribute("href") || "";
+      return Boolean(PRAVNI_EN[h.charAt(0) === "/" ? h.slice(1) : h]);
+    });
+    if (!odkazy.length) return;
+    if (!pravniEnExistuje) {
+      pravniEnExistuje = fetch("/privacy.html", { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (text) { return text.indexOf("vykresli_zasady.py") >= 0 && text.indexOf('lang="en"') >= 0; })
+        .catch(function () { return false; });
+    }
+    pravniEnExistuje.then(function (ano) {
+      if (!ano) return;
+      odkazy.forEach(function (a) {
+        var h = a.getAttribute("href") || "";
+        var lomitko = h.charAt(0) === "/" ? "/" : "";
+        a.setAttribute("href", lomitko + PRAVNI_EN[h.slice(lomitko.length)]);
+      });
+    });
+  }
+
   function nastavJazyk(j) {
     ulozVolbu("jazyk", j);
     try {
@@ -629,6 +668,7 @@
   doc.addEventListener("DOMContentLoaded", function () {
     preloz(doc.body);
     preloz(doc.head);
+    pravniVJazyce(doc.body);
     Array.prototype.forEach.call(doc.querySelectorAll("[data-prepinac-jazyka]"), prepinacJazyka);
     if (window.MutationObserver) {
       // What the product draws later (a list row, a <template> clone) is
@@ -638,6 +678,7 @@
           Array.prototype.forEach.call(z.addedNodes, function (u) {
             if (u.nodeType !== 1) return;
             preloz(u);
+            pravniVJazyce(u);
             if (u.matches && u.matches("[data-prepinac-jazyka]")) prepinacJazyka(u);
           });
         });

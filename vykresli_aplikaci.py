@@ -172,7 +172,7 @@ OFFLINE = """<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="{barva}">
-  <title>{nazev} — bez připojení</title>
+  <title>{nazev} — {titulek}</title>
   <link rel="stylesheet" href="styl.css">
   <link rel="stylesheet" href="produkt.css">
 </head>
@@ -181,12 +181,28 @@ OFFLINE = """<!doctype html>
     <div class="karta">
       <h1>Jste offline</h1>
       <p>{nazev} potřebuje připojení k internetu. Jakmile bude zpátky, stačí to zkusit znovu.</p>
-      <button class="tlacitko" onclick="location.reload()">Zkusit znovu</button>
+{anglicky}      <button class="tlacitko" onclick="location.reload()">{tlacitko}</button>
     </div>
   </main>
 </body>
 </html>
 """
+
+# A product that speaks English is sold to English customers too (#232),
+# and this page is what they see without a signal. It has no texty.js to
+# translate it (offline, nothing loads), so both languages stand on the
+# page itself, the English in its own lang — short, it is a dead end.
+OFFLINE_EN = """      <h2 lang="en">You're offline</h2>
+      <p lang="en">{nazev} needs an internet connection. Once it's back, just try again.</p>
+"""
+
+
+def _offline(nazev: str, barva: str) -> str:
+    if mluvi_anglicky(WEB):
+        return OFFLINE.format(nazev=nazev, barva=barva, titulek="bez připojení / offline",
+                              anglicky=OFFLINE_EN.format(nazev=nazev), tlacitko="Zkusit znovu / Try again")
+    return OFFLINE.format(nazev=nazev, barva=barva, titulek="bez připojení", anglicky="",
+                          tlacitko="Zkusit znovu")
 
 
 # ── Google Play: store listing and Data safety ────────────────────────
@@ -346,9 +362,14 @@ def _zaznam(manifest: dict) -> dict:
         "snimky": [s for s in a.get("snimky") or [] if isinstance(s, dict)],
         # Paths, not URLs: the product's address is known to the release
         # workflow (custom domain or <repo>.pages.dev), not to the repo.
-        "zasady_cesta": "/zasady.html",
+        # One privacy URL per app in Google Play, and its default listing is
+        # English for a product that speaks it: the English policy
+        # (vykresli_zasady.vykresli_privacy), which links the Czech one.
+        "zasady_cesta": "/privacy.html" if ucty and mluvi_anglicky() else "/zasady.html",
         "ucty": ucty,
-        "smazani_uctu_cesta": "/zasady.html" if ucty else None,
+        # Google wants the deletion steps prominent and about this app — the
+        # policy has them as one bullet, in Czech (vykresli_zasady.vykresli_smazani).
+        "smazani_uctu_cesta": "/smazani-uctu.html" if ucty else None,
         "bezpecnost_dat": _bezpecnost_dat(manifest),
     }
 
@@ -432,12 +453,17 @@ def _tahak(manifest: dict, zaznam: dict) -> str:
         "",
         "## 4. Obsah aplikace — ostatní prohlášení (App content)",
         "",
-        "- **Reklamy:** Ne, aplikace neobsahuje reklamy.",
-        "- **Cílová skupina:** 18 let a více.",
-        "- **Hodnocení obsahu (dotazník IARC):** kategorie Nástroje / Produktivita; na otázky o násilí, "
-        "sexu, vulgaritách, drogách, hazardu a sdílení polohy odpověz Ne. Uživatelé spolu "
-        "v aplikaci nekomunikují.",
-        "- **Zpravodajská aplikace / vládní aplikace / finanční funkce / zdraví:** Ne.",
+        # One source for these answers: vydani.konzole writes them from the
+        # build itself (Play Billing → digital purchases "Ano", the AD_ID
+        # permission, the category). This sheet used to carry its own — an
+        # IARC category the questionnaire does not have and "Ne to all"
+        # without the purchase question — and the two contradicted each
+        # other (audit 19. 11. 2026).
+        "Reklamy, cílové publikum, státní aplikaci, finanční funkce, zdraví, inzertní ID a dotazník "
+        "hodnocení obsahu (IARC) vyplň podle `obchod/PRVNI_VYDANI.md` z artefaktu workflow Vydání "
+        "(strojově `obchod/play_console.json`). Odpovědi tam vznikají z konkrétního sestavení "
+        "(jestli aplikace prodává předplatné přes Google Play — pak je nákup digitálního zboží **Ano**, "
+        "jestli balíček žádá inzertní ID, jakou má kategorii), proto se tady neopakují.",
     ]
     if zaznam["ucty"]:
         r += [
@@ -866,7 +892,7 @@ def _texty(manifest: dict, barvy: dict[str, str]) -> dict[Path, str]:
         WEB / "manifest.webmanifest": json.dumps(web_manifest, ensure_ascii=False, indent=2) + "\n",
         WEB / ".well-known" / "assetlinks.json": json.dumps(odkazy, indent=2) + "\n",
         WEB / "sw.js": SW,
-        WEB / "offline.html": OFFLINE.format(nazev=nazev, barva=barvy["akcent"]),
+        WEB / "offline.html": _offline(nazev, barvy["akcent"]),
         PLAY / "zaznam.json": json.dumps(zaznam, ensure_ascii=False, indent=2) + "\n",
         PLAY / "BEZPECNOST_DAT.md": _tahak(manifest, zaznam),
         **_ukazka_web(),
