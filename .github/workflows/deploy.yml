@@ -43,7 +43,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -74,7 +74,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -97,9 +97,17 @@ jobs:
       # (.npmrc, package.json, node_modules, .env, wrangler.toml). Here those
       # would be whatever the branch carries — a wrangler.toml could even
       # bind another product's database — so they go before any tool runs.
+      # A symbolic link is refused outright: wrangler follows it while
+      # uploading web/, so web/x.txt -> /proc/self/environ would publish this
+      # job's environment — the Cloudflare token — on a public preview,
+      # without any merge (security audit 19. 11. 2026). No product needs one.
       - name: Jen data z repozitare
         run: |
           set -euo pipefail
+          if git ls-files -s | grep -q '^120000' || [ -n "$(find . -path ./.git -prune -o -type l -print -quit)" ]; then
+            echo "::error::V repozitari je symbolicky odkaz — nic se nenasazuje."
+            exit 1
+          fi
           find . -path ./.git -prune -o \( -name node_modules -o -name .wrangler \) -prune -exec rm -rf {} +
           find . -path ./.git -prune -o -type f \( -name .npmrc -o -name '.yarnrc*' -o -name package.json \
             -o -name package-lock.json -o -name npm-shrinkwrap.json -o -name yarn.lock -o -name pnpm-lock.yaml \
