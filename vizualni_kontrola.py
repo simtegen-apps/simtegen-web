@@ -82,6 +82,13 @@ MAX_SLOV_PROZA = 50
 # the repo: a product cannot rename its repo, it could write a file.
 WEB_FIRMY_REPO = "simtegen-web"
 JEN_APLIKACE = {"texty_moc"}
+# The help page is prose by design: vykresli_napovedu.py renders it from
+# napoveda.json, the customer reads it when the buttons were not enough, and
+# the support agent answers from it. The app word limit on it could never be
+# met (a whole help page within 50 words) — build 18 spent six rounds on it
+# and tried to edit the generator (16. 11. 2026). Only the limit; overflow,
+# contrast and the rest still apply to it.
+TEXTOVE_STRANKY = {"napoveda.html"}
 
 
 def je_web_firmy(root: Path) -> bool:
@@ -1092,7 +1099,8 @@ def zkontroluj(root: Path | None = None, *, snimky: Path | None = None,
                         if schema == "light" and nazev == "telefon" and not dt.js(_HLASENI_VIDET):
                             bez_hlaseni.append(obrazovka or stranka.name)
                         for druh, popis in _DRUHY.items():
-                            if (schema == "dark" and druh != "kontrast") or druh in vynechat:
+                            if (schema == "dark" and druh != "kontrast") or druh in vynechat \
+                                    or (stranka.name in TEXTOVE_STRANKY and druh in JEN_APLIKACE):
                                 continue
                             for polozka in nalez.get(druh) or ():
                                 kde_nalez = nalezy.setdefault((stranka.name, schema, popis, polozka),
