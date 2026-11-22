@@ -17,10 +17,14 @@
 # script-src zatím zůstává: stránky postavené stavitelem inline skripty mají
 # (bezpečnostní kontrola je vypisuje jako upozornění) a Cloudflare na živé
 # doméně vkládá vlastní inline skript (/cdn-cgi/challenge-platform).
+#
+# Permissions-Policy payment=(self): nákup předplatného v aplikaci z Google Play
+# jde přes Payment Request (Play Billing v TWA). S payment=() ho prohlížeč
+# zakázal i vlastní stránce — v aplikaci nešlo nic koupit (audit 18. 11. 2026).
 /*
   Cache-Control: no-cache
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=()
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(self)
