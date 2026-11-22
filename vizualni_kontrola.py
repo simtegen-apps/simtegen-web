@@ -819,6 +819,20 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
     # user's running Edge and exits 0 — no DevToolsActivePort, no check.
     prostredi = {k: v for k, v in os.environ.items() if k.upper() != "__COMPAT_LAYER"}
     proces = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=log, env=prostredi)
+    try:
+        return proces, _pripoj(proces, profil)
+    except BaseException:
+        # A browser that came up halfway (no port file, no socket, no tab)
+        # is the caller's orphan otherwise: it never got the process.
+        proces.kill()
+        try:
+            proces.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
+        raise
+
+
+def _pripoj(proces: subprocess.Popen, profil: Path) -> _DevTools:
     soubor = profil / "DevToolsActivePort"
     konec = time.monotonic() + 60
     while True:
@@ -837,7 +851,7 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
     dt = _DevTools(_WebSocket(f"ws://127.0.0.1:{int(radky[0])}{radky[1]}", timeout=60))
     cil = dt.volej("Target.createTarget", url="about:blank")["targetId"]
     dt.session = dt.volej("Target.attachToTarget", targetId=cil, flatten=True)["sessionId"]
-    return proces, dt
+    return dt
 
 
 def _sekundy(ms: int) -> str:
