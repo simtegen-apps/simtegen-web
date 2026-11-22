@@ -29,7 +29,8 @@ PODPOROVANE = ("cs", "en")
 # Not app screens: generated legal pages and the offline shell (the same
 # list as the visual check) — they get their language from their generator.
 PRESKOCIT = {"zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
-             "odstoupeni-formular.html", "offline.html"}
+             "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
+             "offline.html"}
 
 _META = re.compile(r'<meta\s+name=["\']simtegen-jazyky["\']\s+content=["\']([^"\']*)["\']', re.I)
 _DATA_T = re.compile(r'data-t(?:-[a-z-]+)?=["\']([\w.-]+)["\']')
