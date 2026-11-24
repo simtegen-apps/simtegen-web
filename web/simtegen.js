@@ -104,6 +104,9 @@
       "sg.ukazka.pripravuji": "Připravuji ukázková data…",
       "sg.ukazka.nejde": "Ukázková data teď nejde nahrát.",
       "sg.objednavka.mimo": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
+      "sg.cena.zmena": "od {datum}: {cena}",
+      "sg.cena.oznameni": "Od {datum} se mění cena předplatného. Už zaplacené období se nemění; když se změnou nesouhlasíte, můžete předplatné do té doby ukončit.",
+      "sg.rozumim": "Rozumím",
       "sg.objednavka.mimo_play": "Objednávka na fakturu je zatím jen pro zákazníky v Česku. Předplatné si koupíte v aplikaci pro Android (Google Play).",
       "sg.chyba.objednavka_jen_cesko": "Objednávka na fakturu je zatím jen pro zákazníky v Česku.",
       "sg.chyba.plati_play": "Předplatné vám běží přes Google Play — platí se tam a tam se i ruší.",
@@ -205,6 +208,9 @@
       "sg.ukazka.pripravuji": "Preparing sample data…",
       "sg.ukazka.nejde": "Sample data cannot be loaded right now.",
       "sg.objednavka.mimo": "Invoice orders are only available to customers in Czechia for now.",
+      "sg.cena.zmena": "from {datum}: {cena}",
+      "sg.cena.oznameni": "The subscription price changes on {datum}. A period already paid stays as it is; if you do not agree with the change, you can end the subscription before then.",
+      "sg.rozumim": "Got it",
       "sg.objednavka.mimo_play": "Invoice orders are only available to customers in Czechia for now. You can subscribe in the Android app (Google Play).",
       "sg.chyba.objednavka_jen_cesko": "Invoice orders are only available to customers in Czechia for now.",
       "sg.chyba.plati_play": "Your subscription runs through Google Play — it is paid and cancelled there.",
@@ -650,6 +656,25 @@
       var p = podle[el.getAttribute("data-cena-jednotka")];
       if (p) el.textContent = jednotka(p);
     });
+    // An approved rise waiting for its day (SimteGen puts it in cenik.json
+    // for the notice the terms promise): the new price beside the old one.
+    var zmena = c.zmena && Array.isArray(c.zmena.polozky) ? c.zmena : null;
+    if (zmena) {
+      var nove = {};
+      zmena.polozky.forEach(function (p) { nove[p.id] = p; });
+      Array.prototype.forEach.call(doc.querySelectorAll("[data-cena]"), function (el) {
+        var n = nove[el.getAttribute("data-cena")];
+        var ceny = (n && n.ceny) || {};
+        var mena = ceny[menaTed] != null ? menaTed : "CZK";
+        if (!n || ceny[mena] == null) return;
+        var vedle = el.nextElementSibling;
+        if (!vedle || !vedle.classList.contains("sg-zmena-ceny")) {
+          vedle = prvek("span", "sg-zmena-ceny");
+          if (el.parentNode) el.parentNode.insertBefore(vedle, el.nextSibling);
+        }
+        vedle.textContent = " (" + tr("sg.cena.zmena", { datum: datum(zmena.od, { rok: true }), cena: cena(ceny[mena], mena) }) + ")";
+      });
+    }
     // No currency buttons any more (12. 11. 2026): the currency follows the
     // country, and in the app from Google Play Google shows its own price.
     // A [data-prepinac-meny] slot an older page still has stays empty.
@@ -685,6 +710,9 @@
       }).observe(doc.body, { childList: true, subtree: true });
     }
     if (doc.querySelector("[data-cena], [data-cena-jednotka], [data-prepinac-meny]")) cenik().then(vykresliCeny);
+    // The rise announced where the subscription is (the terms promise 30
+    // days' notice).
+    cenik().then(oznamZmenuCeny);
   });
 
   /* ── Logo „Díl“ a jeho animace ─────────────────────────────────────
@@ -1129,6 +1157,22 @@
       if (!karta.hasAttribute("tabindex")) karta.setAttribute("tabindex", "-1");
       try { karta.focus({ preventScroll: true }); } catch (e) { karta.focus(); }
     }, 80);
+  }
+
+  function oznamZmenuCeny(c) {
+    // Where the customer deals with the subscription: the price page and
+    // the account's subscription bar. Not stored when dismissed — the
+    // browser keeps only what the privacy policy names (test_konverze).
+    var od = c && c.zmena && c.zmena.od;
+    if (!od || !doc.querySelector("[data-cena], [data-pruh-predplatneho]")) return;
+    var p = prvek("div", "sg-pruh sg-pruh--zmena");
+    p.setAttribute("role", "status");
+    p.appendChild(prvek("p", "sg-pruh-text", tr("sg.cena.oznameni", { datum: datum(od, { rok: true }) })));
+    var t = prvek("button", "tlacitko vedlejsi", tr("sg.rozumim"));
+    t.type = "button";
+    t.addEventListener("click", function () { if (p.parentNode) p.parentNode.removeChild(p); });
+    p.appendChild(t);
+    vlozPruh(p);
   }
 
   var pruhy = null;
