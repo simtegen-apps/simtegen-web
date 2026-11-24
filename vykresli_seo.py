@@ -77,7 +77,8 @@ POPIS_DELKA = 160
 # help page first: questions and answers are what a search (and an AI chat
 # behind it) quotes.
 PRAVNI = ("napoveda.html", "zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
-          "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html")
+          "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
+          "data-processing-agreement.html")
 OBRAZEK = "ikona-512.png"
 
 # The page's monthly price, as the builder writes it (stavitel _MODUL_UVOD).

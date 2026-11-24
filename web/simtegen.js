@@ -81,7 +81,9 @@
       "sg.hlaseni.pro": "Zpráva pro {nazev}",
       "sg.hlaseni.pro_nas": "Zpráva pro nás",
       "sg.hlaseni.uvod": "Napište, co jste dělali a co se stalo. Přiložíme jen technické údaje " +
-        "(verze, obrazovka, chyby stránky), nic o vás. Chcete-li odpověď a nejste přihlášeni, uveďte kontakt.",
+        "(verze, obrazovka, chyby stránky), nic o vás. Chcete-li odpověď a nejste přihlášeni, uveďte kontakt. " +
+        "Zprávu nejdřív přečte náš asistent s umělou inteligencí: na běžné dotazy odpoví sám, " +
+        "ostatní předá člověku.",
       "sg.hlaseni.popisek": "Co se stalo",
       "sg.hlaseni.odeslat": "Odeslat hlášení",
       "sg.hlaseni.prazdne": "Napište nám prosím, o co jde.",
@@ -185,7 +187,8 @@
       "sg.hlaseni.pro_nas": "Message for us",
       "sg.hlaseni.uvod": "Tell us what you were doing and what happened. We attach only technical details " +
         "(version, screen, page errors), nothing about you. If you want a reply and are not signed in, " +
-        "add your contact.",
+        "add your contact. Our artificial intelligence assistant reads the message first: it answers " +
+        "ordinary questions itself and passes the rest to a person.",
       "sg.hlaseni.popisek": "What happened",
       "sg.hlaseni.odeslat": "Send report",
       "sg.hlaseni.prazdne": "Please tell us what it is about.",
