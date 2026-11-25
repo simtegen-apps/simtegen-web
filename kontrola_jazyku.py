@@ -30,6 +30,7 @@ PODPOROVANE = ("cs", "en")
 # list as the visual check) — they get their language from their generator.
 PRESKOCIT = {"zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
              "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
+             "data-processing-agreement.html",
              "offline.html"}
 
 _META = re.compile(r'<meta\s+name=["\']simtegen-jazyky["\']\s+content=["\']([^"\']*)["\']', re.I)

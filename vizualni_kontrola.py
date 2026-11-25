@@ -46,6 +46,7 @@ from pathlib import Path
 # lists) and the offline shell from vykresli_aplikaci.py.
 PRESKOCIT = {"zasady.html", "podminky.html", "zpracovatelska-smlouva.html",
              "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
+             "data-processing-agreement.html",
              "offline.html"}
 
 # (name, width, height, screenshot?) — 360 is the small Android the owner's
