@@ -1436,6 +1436,9 @@ def otisk_zdroju(root: Path) -> str:
         cast = cesta.relative_to(root)
         if (not cesta.is_file() or set(cast.parts) & _MIMO_OTISK or cesta.suffix in (".md", ".py")
                 or cast.as_posix() == "play/co_je_noveho.txt"
+                # The link-preview picture (SimteGen's studio) is on no
+                # screen; a new price on it must not re-shoot the store.
+                or cast.as_posix() == "web/og.png"
                 or (cast.parts[0] == "web" and len(cast.parts) == 2 and cast.name in PRESKOCIT)):
             continue
         h.update(b"\0" + cast.as_posix().encode("utf-8") + b"\0")

@@ -30,9 +30,18 @@ Manifest inputs:
               line): a guessed canonical tells search engines to index some
               other site, which is worse than no canonical at all.
 
-og:image is the app icon (web/ikona-512.png) and only with the app module:
-that module is what draws the icon, so deciding by the manifest instead of
-by the file keeps the output independent of the order generators run in.
+  sdileci_obrazek  optional: the share picture's file name in web/ (SimteGen's
+              studio writes "og.png", 1200 × 630, by a bot PR). With it and
+              an address, og:image is that picture with its size and the
+              Twitter card is the large one.
+
+og:image is the share picture when the manifest names one, else the app
+icon (web/ikona-512.png) and only with the app module: that module is what
+draws the icon. Both are decided by the manifest, never by the files —
+that keeps the output independent of the order generators run in, and of
+the folder the block is computed in (SimteGen renders the firm's web page
+with this block outside the repo). The picture's size is the studio's one
+format (SDILENI_ROZMER); CI checks the file really is that PNG.
 
 The block also carries schema.org data (JSON-LD) — what an AI chat or a
 search engine reads as facts rather than prose: what the product is, who
@@ -55,6 +64,7 @@ from __future__ import annotations
 import html
 import json
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -80,6 +90,10 @@ PRAVNI = ("napoveda.html", "zasady.html", "podminky.html", "zpracovatelska-smlou
           "odstoupeni-formular.html", "smazani-uctu.html", "privacy.html", "terms.html",
           "data-processing-agreement.html")
 OBRAZEK = "ikona-512.png"
+# The share picture (sdileci_obrazek): a plain PNG name in web/, and the one
+# size SimteGen's studio renders it at (the Open Graph format).
+_SDILENI = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}\.png$")
+SDILENI_ROZMER = (1200, 630)
 
 # The page's monthly price, as the builder writes it (stavitel _MODUL_UVOD).
 _CENIK = re.compile(r"""window\.CENIK\s*=\s*\{\s*["']?mesic["']?\s*:\s*(\d+)\s*,\s*["']?mena["']?\s*:\s*["']([^"']{1,8})["']""")
@@ -121,6 +135,25 @@ def _popis(manifest: dict) -> str:
     return _jednoradkove(manifest.get("popis") or aplikace.get("popis"))
 
 
+def sdileci_obrazek(manifest: dict) -> str:
+    """The share picture's file name in web/, or "" without a usable one
+    (_chyby_konfigurace says why)."""
+    jmeno = str(manifest.get("sdileci_obrazek") or "").strip()
+    return jmeno if _SDILENI.match(jmeno) else ""
+
+
+def _rozmer_png(cesta: Path) -> tuple[int, int] | None:
+    """(width, height) from a PNG's header, or None when it is not one."""
+    try:
+        with open(cesta, "rb") as soubor:
+            hlava = soubor.read(24)
+    except OSError:
+        return None
+    if len(hlava) < 24 or hlava[:8] != b"\x89PNG\r\n\x1a\n" or hlava[12:16] != b"IHDR":
+        return None
+    return struct.unpack(">II", hlava[16:24])
+
+
 def _chyby_konfigurace(manifest: dict) -> list[str]:
     chyby = []
     surova = str(manifest.get("adresa") or "").strip()
@@ -130,7 +163,28 @@ def _chyby_konfigurace(manifest: dict) -> list[str]:
     if len(_popis(manifest)) > POPIS_DELKA:
         chyby.append(f"data-manifest.json: popis má {len(_popis(manifest))} znaků, nejvýš {POPIS_DELKA} "
                      "— vyhledávač delší popis usekne uprostřed věty.")
+    surovy_obrazek = str(manifest.get("sdileci_obrazek") or "").strip()
+    if surovy_obrazek and not sdileci_obrazek(manifest):
+        chyby.append(f"data-manifest.json: sdileci_obrazek „{surovy_obrazek[:60]}“ není jméno PNG souboru ve web/ "
+                     "(malá písmena, číslice, pomlčky, .png) — doplňuje ho SimteGen, needituj ho ručně.")
     return chyby
+
+
+def _chyby_obrazku(manifest: dict) -> list[str]:
+    """CI: the share picture the block announces exists and is the PNG of
+    the size the block says — a crawler that gets a 404 or another size
+    shows a grey box, the very thing the block exists to prevent."""
+    jmeno = sdileci_obrazek(manifest)
+    if not jmeno:
+        return []
+    rozmer = _rozmer_png(WEB / jmeno)
+    if rozmer is None:
+        return [f"web/{jmeno}: manifest ho uvádí jako sdílecí obrázek, ale soubor chybí nebo není PNG "
+                "— dodává ho SimteGen (studio) spolu s polem sdileci_obrazek."]
+    if tuple(rozmer) != SDILENI_ROZMER:
+        return [f"web/{jmeno}: má {rozmer[0]} × {rozmer[1]} px, sdílecí obrázek má mít "
+                f"{SDILENI_ROZMER[0]} × {SDILENI_ROZMER[1]} px."]
+    return []
 
 
 def _cena(index_text: str) -> tuple[int, str] | None:
@@ -249,13 +303,22 @@ def blok(manifest: dict, index_text: str = "") -> str:
         radky.append(f'<meta property="og:title" content="{_atr(nazev)}">')
     if popis:
         radky.append(f'<meta property="og:description" content="{_atr(popis)}">')
+    velky = bool(url and sdileci_obrazek(manifest))
     if url:
         radky.append(f'<meta property="og:url" content="{url}/">')
-        if "aplikace" in manifest:
+        if velky:
+            sirka, vyska = SDILENI_ROZMER
+            radky += [f'<meta property="og:image" content="{url}/{sdileci_obrazek(manifest)}">',
+                      f'<meta property="og:image:width" content="{sirka}">',
+                      f'<meta property="og:image:height" content="{vyska}">']
+            if nazev:
+                radky.append(f'<meta property="og:image:alt" content="{_atr(nazev)}">')
+        elif "aplikace" in manifest:
             radky.append(f'<meta property="og:image" content="{url}/{OBRAZEK}">')
-    # "summary", not "summary_large_image": the only picture is a square
-    # icon, which the large card would crop into a strip.
-    radky.append('<meta name="twitter:card" content="summary">')
+    # The large card only for the share picture (1200 × 630, made for it);
+    # "summary" for the square icon, which the large card would crop into a
+    # strip.
+    radky.append(f'<meta name="twitter:card" content="{"summary_large_image" if velky else "summary"}">')
     data = strukturovana_data(manifest, index_text)
     if data:
         radky.append(f'<script type="application/ld+json">{_json_ld(data)}</script>')
@@ -340,7 +403,7 @@ def vykresli(manifest: dict) -> list[str]:
 def zkontroluj(manifest: dict) -> list[str]:
     """CI: the block and both files equal the generator, nothing outside
     the block duplicates its tags."""
-    chyby = _chyby_konfigurace(manifest)
+    chyby = _chyby_konfigurace(manifest) + _chyby_obrazku(manifest)
     oprava = "spusť `python vykresli_seo.py` (generuje se z manifestu, ručně se needituje)"
     if INDEX.exists():
         text = INDEX.read_text(encoding="utf-8").replace("\r\n", "\n")
