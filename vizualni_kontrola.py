@@ -788,6 +788,31 @@ _UKAZ = r"""
 """
 
 
+# What the browser gets from the caller's environment: only what it needs to
+# start, find its own files and fonts, and write its temporary data — never
+# a token, a key or a setting of whoever runs the check (the page it renders
+# is the product's, and a browser hands its environment to its children).
+# __COMPAT_LAYER stays out on purpose: a Windows compatibility shim some
+# launchers pass down (seen: DetectorsAppHealth), under which Edge 155 hands
+# the window to the user's running Edge and exits 0 — no DevToolsActivePort.
+_PROSTREDI_PROHLIZECE = frozenset({
+    # Windows
+    "SYSTEMROOT", "WINDIR", "SYSTEMDRIVE", "COMSPEC", "PATH", "PATHEXT", "TEMP", "TMP",
+    "LOCALAPPDATA", "APPDATA", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "PUBLIC", "ALLUSERSPROFILE",
+    "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432", "COMMONPROGRAMFILES",
+    "COMMONPROGRAMFILES(X86)", "COMMONPROGRAMW6432", "COMPUTERNAME", "USERNAME", "USERDOMAIN", "OS",
+    "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
+    # Linux and macOS
+    "HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "LANGUAGE", "TZ", "DISPLAY", "WAYLAND_DISPLAY",
+    "DBUS_SESSION_BUS_ADDRESS", "FONTCONFIG_FILE", "FONTCONFIG_PATH",
+})
+
+
+def prostredi_prohlizece() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items()
+            if k.upper() in _PROSTREDI_PROHLIZECE or k.upper().startswith(("LC_", "XDG_"))}
+
+
 def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[subprocess.Popen, _DevTools]:
     """Start the browser and open our own tab over the browser-level socket.
 
@@ -815,11 +840,7 @@ def _spust_prohlizec(exe: str, profil: Path, log, sit: bool = False) -> tuple[su
         # GitHub runners and containers lack the user namespaces Chrome's
         # sandbox wants; the page is our own, served from 127.0.0.1.
         argv.insert(1, "--no-sandbox")
-    # __COMPAT_LAYER is a Windows compatibility shim some launchers pass down
-    # (seen: DetectorsAppHealth). Under it Edge 155 hands the window to the
-    # user's running Edge and exits 0 — no DevToolsActivePort, no check.
-    prostredi = {k: v for k, v in os.environ.items() if k.upper() != "__COMPAT_LAYER"}
-    proces = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=log, env=prostredi)
+    proces = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=log, env=prostredi_prohlizece())
     try:
         return proces, _pripoj(proces, profil)
     except BaseException:
