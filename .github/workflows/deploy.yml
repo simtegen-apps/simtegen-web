@@ -47,6 +47,32 @@ jobs:
         with:
           persist-credentials: false
 
+      # The security gates come from the TEMPLATE repo, not from this
+      # checkout: the branch must not bring the check that judges it. They
+      # run first, before any of the repository's own code, and only when
+      # they match the hashes listed in the template's own deploy.yml — a
+      # workflow file, which only a person can change. The list below is
+      # that list (py ops/otisky_vydani.py rewrites it); in a product's copy
+      # it is never read.
+      # OTISK-KONTROLY 255c758bb6ffa0304ec5993646c69096025a5cb3ab2667aa6d4c8dcf60bb5b21  kontroly_ze_sablony.py
+      # OTISK-KONTROLY 9a809a12219fe8eae3ada419fa1a48d6c8e148a8e38f66e5d5e2f1404e28e4bf  bezpecnostni_kontrola.py
+      - name: Kontroly ze sablony
+        working-directory: ${{ runner.temp }}
+        env:
+          SIMTEGEN_PODPIS: ${{ vars.SIMTEGEN_PODPIS }}
+          SABLONA: simtegen-apps/simtegen-sablona
+        run: |
+          set -euo pipefail
+          rm -rf kontroly-sablony
+          git clone -q --depth 1 --branch main "https://github.com/$SABLONA.git" kontroly-sablony
+          cd kontroly-sablony
+          grep -E '^ *# OTISK-KONTROLY [0-9a-f]{64}  [A-Za-z0-9_.]+$' .github/workflows/deploy.yml | sed -E 's/^ *# OTISK-KONTROLY //' > "$RUNNER_TEMP/otisky-kontrol" || true
+          for f in kontroly_ze_sablony.py bezpecnostni_kontrola.py; do
+            grep -q "  $f\$" "$RUNNER_TEMP/otisky-kontrol" || { echo "::error::Sablona nema otisk $f."; exit 1; }
+          done
+          sha256sum --check --strict "$RUNNER_TEMP/otisky-kontrol"
+          python3 -I kontroly_ze_sablony.py --koren "$GITHUB_WORKSPACE"
+
       # SIMTEGEN_PODPIS is a public key (an organisation variable, not a
       # secret) — the same environment as the memory template's check.
       - name: Kontrola manifestu proti kodu
@@ -119,11 +145,25 @@ jobs:
         with:
           node-version: 20
 
-      # Outside the checkout and without install scripts: nothing from the
-      # repository takes part in the install.
+      # Outside the checkout and without install scripts, one exact version
+      # from the lockfile (integrity hashes). The lockfile is data from the
+      # branch, so it is checked against hashes in this workflow file, which
+      # the bot token cannot write (py ops/otisky_vydani.py rewrites them).
       - name: Wrangler
-        working-directory: ${{ runner.temp }}
-        run: npm install --global --ignore-scripts --no-audit --no-fund "$WRANGLER"
+        run: |
+          set -euo pipefail
+          sha256sum --check --strict <<'OTISKY'
+          4fcbcc058abacae2ac38480d798fdfecb8690e33274211055a3a8cff302a261f  .github/nastroje/wrangler.package.json
+          1d85c79d1b64c522d125c07ab8d6eea85f7e3eac60e8c308f4154a3725016b5d  .github/nastroje/wrangler.lock.json
+          OTISKY
+          w="$RUNNER_TEMP/wrangler"
+          mkdir -p "$w"
+          cp .github/nastroje/wrangler.package.json "$w/package.json"
+          cp .github/nastroje/wrangler.lock.json "$w/package-lock.json"
+          (cd "$w" && npm ci --ignore-scripts --no-audit --no-fund --silent)
+          [ "$(jq -r .version "$w/node_modules/wrangler/package.json")" = "${WRANGLER##*@}" ] || {
+            echo "Zamceny wrangler neni verze z WRANGLER."; exit 1; }
+          echo "$w/node_modules/.bin" >> "$GITHUB_PATH"
 
       # Projekt se jmenuje po repozitari, takze sablona nepotrebuje zadnou
       # per-produkt parametrizaci. Create je idempotentni diky "|| true" —
