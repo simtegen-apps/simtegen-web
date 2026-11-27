@@ -24,6 +24,9 @@ The rules, in order:
   caller's subscription passes every other rule);
 - no raw DB.exec(), no innerHTML/eval/document.write with data;
 - no keys or tokens in the repository;
+- server code imports only files of the repository itself (no absolute
+  path, drive letter, file: URL or "../" out of it) — the bundler reads
+  whatever a specifier names;
 - web/_headers carries the Content-Security-Policy (memory template);
 - reports leave only encrypted (through schranka_sifra.js).
 
@@ -746,8 +749,32 @@ _XSS = [
     (re.compile(r"(?<![\w.])eval\s*\("), "eval"),
     (re.compile(r"\bnew\s+Function\s*\("), "new Function"),
     (re.compile(r"\bset(?:Timeout|Interval)\s*\(\s*[\"'`]"), "setTimeout s textem"),
-    (re.compile(r"(?i)href\s*=\s*[\"']\s*javascript:"), "javascript: odkaz"),
 ]
+
+# A script URL in an attribute or a URL property, written any way the
+# browser still reads as one: quoted or not, after a space or a "/",
+# with HTML entities or JS escapes, with tabs and newlines inside.
+_URL_HODNOTA = r"""("[^"]*"|'[^']*'|`[^`]*`|[^\s>"'`]+)"""
+_URL_ATRIBUT = re.compile(r"(?i)(?<![\w-])(?:href|src|action|formaction|xlink:href|poster|background)\s*=\s*"
+                          + _URL_HODNOTA)
+_URL_VOLANI = re.compile(r"(?i)\bsetAttribute(?:NS)?\s*\([^,()]*?[\"'](?:href|src|action|formaction|xlink:href)"
+                         r"[\"']\s*,\s*" + _URL_HODNOTA
+                         + r"|\blocation\s*(?:\.\s*(?:assign|replace)\s*\(\s*|=\s*)" + _URL_HODNOTA
+                         + r"|\bwindow\s*\.\s*open\s*\(\s*" + _URL_HODNOTA)
+_JS_ESCAPE = re.compile(r"\\x([0-9a-fA-F]{2})|\\u\{([0-9a-fA-F]{1,6})\}|\\u([0-9a-fA-F]{4})")
+
+
+def _skriptova_adresa(hodnota: str) -> bool:
+    """Does this attribute value or string open a script when followed?"""
+    import html
+
+    v = hodnota.strip()
+    if len(v) >= 2 and v[0] in "\"'`" and v[-1] == v[0]:
+        v = v[1:-1]
+    v = _JS_ESCAPE.sub(lambda m: chr(int(m.group(1) or m.group(2) or m.group(3), 16)), v)
+    v = html.unescape(v)
+    v = re.sub(r"[\x00-\x20]", "", v).lower()
+    return v.startswith(("javascript:", "vbscript:"))
 
 
 def _zkontroluj_web(root: Path, preskocit: set[Path]) -> list[str]:
@@ -775,6 +802,12 @@ def _zkontroluj_web(root: Path, preskocit: set[Path]) -> list[str]:
             for m in vzor.finditer(text):
                 chyby.append(f"{rel}:{_radek(text, m.start())}: {nazev} — zakázané (spouští nebo vkládá "
                              "kód z textu).")
+        for vzor in (_URL_ATRIBUT, _URL_VOLANI):
+            for m in vzor.finditer(text):
+                hodnota = next(g for g in m.groups() if g is not None)
+                if _skriptova_adresa(hodnota):
+                    chyby.append(f"{rel}:{_radek(text, m.start())}: javascript: odkaz — zakázané (spouští "
+                                 "kód z textu).")
     return chyby
 
 
@@ -816,7 +849,10 @@ def _zkontroluj_hlavicky(root: Path) -> list[str]:
 # CSP, and with it the CSP stops nothing that got into the page as markup.
 _INLINE_SKRIPT = re.compile(r"<script\b(?![^>]*\bsrc\s*=)([^>]*)>", re.IGNORECASE)
 _DATOVY_SKRIPT = re.compile(r"\btype\s*=\s*[\"']?application/(?:ld\+)?json", re.IGNORECASE)
-_OBSLUHA = re.compile(r"\son[a-z]+\s*=\s*[\"'{]", re.IGNORECASE)
+# Any on…= attribute: after whitespace, "/" or a quote (a browser takes
+# <svg/onload=…> and <img alt="x"onerror=…> as attributes too), with a
+# value quoted or not.
+_OBSLUHA = re.compile(r"""[\s/"']on[a-z]+\s*=""", re.IGNORECASE)
 
 
 def inline_skripty(root: Path | None = None) -> list[str]:
@@ -835,6 +871,156 @@ def inline_skripty(root: Path | None = None) -> list[str]:
             vysledek.append(f"{_rel(root, path)}: inline skripty {skripty}, obsluhy on…= {obsluhy} — "
                             "dokud tu jsou, CSP musí povolit 'unsafe-inline' (patří do .js a addEventListener).")
     return vysledek
+
+
+# --- what the server code bundles -------------------------------------------
+# Everything outside web/ that functions/ can reach is bundled into the
+# Worker, and a module specifier is read from disk wherever it points. Only
+# files of the repository itself belong there: a specifier that is an
+# absolute path, a drive letter, a URL with a scheme or a "../" leading out
+# of the repository is refused, and so is one the check cannot read (built
+# from a variable). Packages only when the repository declares them.
+
+_SERVEROVE = (".js", ".mjs", ".cjs", ".ts", ".mts", ".jsx", ".tsx")
+_SCHEMATA_SMI = {"node", "cloudflare"}
+
+
+def _cil_importu(rel: str, spec: str, balicky: set[str]) -> str | None:
+    """Why this specifier may not be bundled, or None when it may."""
+    import posixpath
+    from urllib.parse import unquote
+
+    s = unquote(spec.strip()).replace("\\", "/")
+    s = re.split(r"[?#]", s, maxsplit=1)[0]
+    if not s:
+        return "prázdná cesta"
+    schema = re.match(r"^([A-Za-z][A-Za-z0-9+.\-]*):", s)
+    if schema:
+        return None if schema.group(1).lower() in _SCHEMATA_SMI else "cesta se schématem nebo písmenem disku"
+    if s.startswith("/"):
+        return "absolutní cesta"
+    if s.startswith("./") or s.startswith("../") or s in (".", ".."):
+        cil = posixpath.normpath(posixpath.join(posixpath.dirname(rel), s))
+        return "cesta mimo repozitář" if cil == ".." or cil.startswith("../") else None
+    casti = s.split("/")
+    if ".." in casti or "." in casti:
+        return "cesta mimo repozitář"
+    jmeno = "/".join(casti[:2]) if s.startswith("@") else casti[0]
+    return None if jmeno in balicky else "balíček, který repozitář nedeklaruje (package.json)"
+
+
+def _balicky(root: Path) -> set[str]:
+    try:
+        data = json.loads((root / "package.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    if not isinstance(data, dict):
+        return set()
+    return {k for sekce in ("dependencies", "devDependencies") if isinstance(data.get(sekce), dict)
+            for k in data[sekce]}
+
+
+def _retezec(text: str, maska: str, start: int) -> tuple[str | None, int]:
+    """(content of the string literal whose quote is at `start`, its end).
+    None when the literal holds ${…} or does not close on its line."""
+    uvozovka = maska[start]
+    konec = maska.find(uvozovka, start + 1)
+    if konec < 0 or "\n" in maska[start:konec] or "${" in maska[start:konec]:
+        return None, start + 1
+    return text[start + 1:konec], konec + 1
+
+
+def _vstupy_balicku(root: Path) -> list[Path]:
+    """Where the bundler starts: every server file under functions/, and an
+    advanced-mode web/_worker.js (a file or a folder) when there is one."""
+    vstupy = [p for p in _soubory(root, root, _SERVEROVE) if _rel(root, p).startswith("functions/")]
+    worker = root / "web" / "_worker.js"
+    if worker.is_file():
+        vstupy.append(worker)
+    elif worker.is_dir():
+        vstupy += list(_soubory(root, worker, _SERVEROVE))
+    return vstupy
+
+
+def _soubor_importu(root: Path, rel: str, spec: str) -> Path | None:
+    """The repository file a relative specifier names, found the way the
+    bundler finds it (as written, with a server suffix, index.*), or None."""
+    import posixpath
+    from urllib.parse import unquote
+
+    s = re.split(r"[?#]", unquote(spec.strip()).replace("\\", "/"), maxsplit=1)[0]
+    if not (s.startswith("./") or s.startswith("../")):
+        return None
+    cil = posixpath.normpath(posixpath.join(posixpath.dirname(rel), s))
+    if cil == ".." or cil.startswith("../"):
+        return None
+    zaklad = root / cil
+    for kandidat in ([zaklad] + [zaklad.with_name(zaklad.name + k) for k in _SERVEROVE]
+                     + [zaklad / f"index{k}" for k in _SERVEROVE]):
+        if kandidat.is_file():
+            return kandidat
+    return None
+
+
+def _zkontroluj_importy(root: Path) -> list[str]:
+    """Only what reaches the bundle: functions/ (and web/_worker.js) and
+    every repository file they import, transitively. A script in the
+    repository that nothing there imports (a test run by hand with Node) is
+    never uploaded, so it is not this check's business."""
+    chyby: list[str] = []
+    balicky = _balicky(root)
+    fronta = _vstupy_balicku(root)
+    videno: set[Path] = set()
+    while fronta:
+        path = fronta.pop()
+        if path in videno or path.suffix.lower() not in _SERVEROVE:
+            continue
+        videno.add(path)
+        rel = _rel(root, path)
+        text = path.read_text(encoding="utf-8", errors="replace")
+        maska = _maska(text)
+
+        def nalez(pozice: int, duvod: str, spec: str | None = None) -> None:
+            co = f"import „{spec[:80]}“" if spec is not None else "import"
+            chyby.append(f"{rel}:{_radek(text, pozice)}: {co} — {duvod}; kód produktu smí přibalit jen "
+                         "soubory vlastního repozitáře.")
+
+        def dalsi(spec: str) -> None:
+            cil = _soubor_importu(root, rel, spec)
+            if cil is not None:
+                fronta.append(cil)
+
+        # Static forms: `… from "x"` (import and export) and `import "x"`.
+        for m in re.finditer(r"\bfrom\s*([\"'])|\bimport\s*([\"'])", maska):
+            spec, _ = _retezec(text, maska, m.end() - 1)
+            if spec is None:
+                nalez(m.start(), "cestu nejde přečíst")
+                continue
+            duvod = _cil_importu(rel, spec, balicky)
+            if duvod:
+                nalez(m.start(), duvod, spec)
+            else:
+                dalsi(spec)
+        # Calls with a path: import(…), require(…), new URL(…, import.meta.url).
+        for m in re.finditer(r"\bimport\s*\(|\brequire\s*\(|\bnew\s+URL\s*\(", maska):
+            if m.group(0).startswith("new"):
+                konec = _par(maska, m.end() - 1)
+                if not re.search(r"\bimport\s*\.\s*meta\b", maska[m.end():konec]):
+                    continue
+            zacatek = m.end() + len(maska[m.end():]) - len(maska[m.end():].lstrip())
+            if zacatek >= len(maska) or maska[zacatek] not in "\"'`":
+                nalez(m.start(), "cesta z proměnné — kontrola ji nepřečte")
+                continue
+            spec, za = _retezec(text, maska, zacatek)
+            if spec is None or maska[za:].lstrip()[:1] not in (",", ")"):
+                nalez(m.start(), "cesta z proměnné — kontrola ji nepřečte")
+                continue
+            duvod = _cil_importu(rel, spec, balicky)
+            if duvod:
+                nalez(m.start(), duvod, spec)
+            else:
+                dalsi(spec)
+    return chyby
 
 
 def _zkontroluj_hlaseni(root: Path) -> list[str]:
@@ -883,7 +1069,7 @@ def zkontroluj_vse(root: Path | None = None, manifest: dict | None = None,
     sql_chyby, vyjimky = _zkontroluj_sql(root)
     chyby = (_zkontroluj_pristup(root, manifest) + sql_chyby
              + _zkontroluj_web(root, preskocit) + _zkontroluj_hlavicky(root)
-             + _zkontroluj_hlaseni(root) + _zkontroluj_tajemstvi(root))
+             + _zkontroluj_hlaseni(root) + _zkontroluj_tajemstvi(root) + _zkontroluj_importy(root))
     upozorneni = ([f"výjimky z filtru uzivatel_id (mimo-uzivatele): {len(vyjimky)}"] + vyjimky) if vyjimky else []
     return chyby, upozorneni
 
